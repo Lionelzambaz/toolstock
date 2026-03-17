@@ -5,6 +5,7 @@ import { Layout } from './components/Layout/Layout'
 import CatalogPage from './pages/CatalogPage'
 import CartPage from './pages/CartPage'
 import CommandsPage from './pages/CommandsPage'
+import ValidationPage from './pages/ValidationPage'
 
 export default function App() {
   const { isAuthenticated, loading } = useAuth()
@@ -57,10 +58,6 @@ export default function App() {
 }
 
 // Composants placeholder (à créer plus tard)
-function ValidationPage() {
-  return <div><h2>Validation des commandes</h2><p>À venir...</p></div>
-}
-
 function AdminPage() {
   return <div><h2>Administration</h2><p>À venir...</p></div>
 }
