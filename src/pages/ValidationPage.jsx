@@ -16,26 +16,27 @@ export default function ValidationPage() {
     fetchPendingCommands()
   }, [])
 
-  async function fetchPendingCommands() {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('commands')
-        .select(`
-          *,
-          projects(nom, numero_projet)
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true })
-      
-      if (error) throw error
-      setCommands(data || [])
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+        async function fetchPendingCommands() {
+        try {
+            setLoading(true)
+            const { data, error } = await supabase
+            .from('commands')
+            .select(`
+                *,
+                projects(nom, numero_projet),
+                users!user_id(nom)
+            `)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true })
+            
+            if (error) throw error
+            setCommands(data || [])
+        } catch (err) {
+            setError(err.message)
+        } finally {
+            setLoading(false)
+        }
+        }
 
   async function fetchCommandDetails(commandId) {
     try {
@@ -60,9 +61,48 @@ export default function ValidationPage() {
     fetchCommandDetails(command.id)
   }
 
+  function updateItemQuantity(itemId, newQuantity) {
+    setCommandDetails(prev =>
+      prev.map(item =>
+        item.id === itemId
+          ? { ...item, quantite: newQuantity }
+          : item
+      )
+    )
+  }
+
+  async function removeItem(itemId) {
+    try {
+      // Supprimer de la base de données
+      const { error } = await supabase
+        .from('command_items')
+        .delete()
+        .eq('id', itemId)
+      
+      if (error) throw error
+      
+      // Supprimer de l'affichage
+      setCommandDetails(prev => prev.filter(item => item.id !== itemId))
+    } catch (err) {
+      alert('Erreur lors de la suppression: ' + err.message)
+    }
+  }
+
   async function handleValidate() {
     try {
       setSubmitting(true)
+
+      // Mettre à jour les quantités modifiées dans command_items
+      for (const item of commandDetails) {
+        const { error } = await supabase
+          .from('command_items')
+          .update({ quantite: item.quantite })
+          .eq('id', item.id)
+        
+        if (error) throw error
+      }
+
+      // Valider la commande
       const { error } = await supabase
         .from('commands')
         .update({
@@ -169,40 +209,68 @@ export default function ValidationPage() {
             <div style={styles.detailPanel}>
               <h3 style={styles.panelTitle}>Détails de la commande</h3>
 
-              <div style={styles.commandInfo}>
+                <div style={styles.commandInfo}>
                 <p><strong>Commande :</strong> #{selectedCommand.id.slice(0, 8).toUpperCase()}</p>
                 <p><strong>Date :</strong> {new Date(selectedCommand.created_at).toLocaleDateString('fr-CH')}</p>
                 <p><strong>Projet :</strong> {selectedCommand.projects?.nom}</p>
-              </div>
+                <p><strong>Créée par :</strong> {selectedCommand.users?.nom || 'Utilisateur inconnu'}</p>
+                </div>
 
               {commandDetails && commandDetails.length > 0 && (
                 <div>
                   <h4 style={styles.itemsTitle}>Pièces commandées</h4>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr style={styles.tableHeader}>
-                        <th style={styles.th}>N° Interne</th>
-                        <th style={styles.th}>Dénomination</th>
-                        <th style={styles.th}>Qty</th>
-                        <th style={styles.th}>Prix U</th>
-                        <th style={styles.th}>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {commandDetails.map((item, idx) => (
-                        <tr key={item.id} style={{backgroundColor: idx % 2 === 0 ? 'white' : '#f9f9f9'}}>
-                          <td style={styles.td}>{item.pieces.numero_interne}</td>
-                          <td style={styles.td}>{item.pieces.denomination}</td>
-                          <td style={styles.td}>{item.quantite}</td>
-                          <td style={styles.td}>{item.prix_unitaire.toFixed(2)} CHF</td>
-                          <td style={styles.td}><strong>{(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong></td>
+                  <div style={styles.tableContainer}>
+                    <table style={styles.table}>
+                      <thead>
+                        <tr style={styles.tableHeader}>
+                          <th style={styles.th}>N° Interne</th>
+                          <th style={styles.th}>Dénomination</th>
+                          <th style={styles.th}>Qty</th>
+                          <th style={styles.th}>Prix U</th>
+                          <th style={styles.th}>Total</th>
+                          <th style={styles.th}>Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {commandDetails.map((item, idx) => (
+                          <tr key={item.id} style={{backgroundColor: idx % 2 === 0 ? 'white' : '#f9f9f9'}}>
+                            <td style={styles.td}>{item.pieces.numero_interne}</td>
+                            <td style={styles.td}>{item.pieces.denomination}</td>
+                            <td style={styles.td}>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantite}
+                                onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
+                                style={styles.qtyInput}
+                                disabled={submitting}
+                              />
+                            </td>
+                            <td style={styles.td}>{item.prix_unitaire.toFixed(2)} CHF</td>
+                            <td style={styles.td}><strong>{(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong></td>
+                            <td style={styles.td}>
+                              <button
+                                onClick={() => removeItem(item.id)}
+                                style={styles.removeBtn}
+                                disabled={submitting}
+                              >
+                                ✕
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                   <div style={styles.total}>
                     Montant total : <strong>{calculateTotal(commandDetails).toFixed(2)} CHF</strong>
                   </div>
+                </div>
+              )}
+
+              {commandDetails && commandDetails.length === 0 && (
+                <div style={styles.emptyItems}>
+                  <p>Aucun article dans cette commande</p>
                 </div>
               )}
 
@@ -276,19 +344,23 @@ const styles = {
     backgroundColor: 'white',
     borderRadius: '8px',
     padding: '20px',
-    height: 'fit-content'
+    height: 'fit-content',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
   },
   detailPanel: {
     backgroundColor: 'white',
     borderRadius: '8px',
-    padding: '20px'
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
   },
   panelTitle: {
     color: '#042C53',
     marginTop: 0,
     marginBottom: '15px',
     borderBottom: '2px solid #185FA5',
-    paddingBottom: '10px'
+    paddingBottom: '10px',
+    fontSize: '16px',
+    fontWeight: '500'
   },
   commandsList: {
     display: 'flex',
@@ -321,17 +393,25 @@ const styles = {
     backgroundColor: '#f5f5f5',
     padding: '15px',
     borderRadius: '6px',
-    marginBottom: '20px'
+    marginBottom: '20px',
+    borderLeft: '4px solid #185FA5'
   },
   itemsTitle: {
     color: '#042C53',
     marginTop: '20px',
-    marginBottom: '10px'
+    marginBottom: '10px',
+    fontSize: '14px',
+    fontWeight: '500'
+  },
+  tableContainer: {
+    overflow: 'auto',
+    borderRadius: '6px'
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    marginBottom: '15px'
+    marginBottom: '15px',
+    fontSize: '13px'
   },
   tableHeader: {
     backgroundColor: '#185FA5',
@@ -348,13 +428,40 @@ const styles = {
     borderBottom: '1px solid #eee',
     fontSize: '13px'
   },
+  qtyInput: {
+    width: '50px',
+    padding: '6px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    textAlign: 'center',
+    fontSize: '14px'
+  },
+  removeBtn: {
+    padding: '6px 10px',
+    backgroundColor: '#A32D2D',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    fontWeight: '500'
+  },
   total: {
-    padding: '10px',
+    padding: '12px',
     backgroundColor: '#E6F1FB',
     borderRadius: '6px',
     textAlign: 'right',
     color: '#185FA5',
-    fontWeight: '500'
+    fontWeight: '500',
+    borderLeft: '4px solid #185FA5'
+  },
+  emptyItems: {
+    padding: '20px',
+    backgroundColor: '#f5f5f5',
+    borderRadius: '6px',
+    textAlign: 'center',
+    color: '#888780',
+    marginBottom: '20px'
   },
   commentsBox: {
     marginTop: '20px',
@@ -364,7 +471,8 @@ const styles = {
     display: 'block',
     marginBottom: '8px',
     fontWeight: '500',
-    color: '#333'
+    color: '#333',
+    fontSize: '14px'
   },
   textarea: {
     width: '100%',
