@@ -96,6 +96,7 @@ export function useAuth() {
     error,
     login,
     logout,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    role: userProfile?.role
   }
 }

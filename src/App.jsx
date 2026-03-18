@@ -6,6 +6,7 @@ import CatalogPage from './pages/CatalogPage'
 import CartPage from './pages/CartPage'
 import CommandsPage from './pages/CommandsPage'
 import ValidationPage from './pages/ValidationPage'
+import AdminPage from './pages/AdminPage'
 
 export default function App() {
   const { isAuthenticated, loading } = useAuth()
@@ -21,10 +22,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Route Login - accessible à tout le monde */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Routes protégées - nécessitent d'être connecté */}
         {isAuthenticated ? (
           <>
             <Route path="/catalog" element={
@@ -42,22 +41,15 @@ export default function App() {
             <Route path="/admin" element={
               <Layout><AdminPage /></Layout>
             } />
-            {/* Redirection par défaut */}
             <Route path="/" element={<Navigate to="/catalog" replace />} />
             <Route path="*" element={<Navigate to="/catalog" replace />} />
           </>
         ) : (
           <>
-            {/* Si pas connecté, tout redirige vers login */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </>
         )}
       </Routes>
     </BrowserRouter>
   )
-}
-
-// Composants placeholder (à créer plus tard)
-function AdminPage() {
-  return <div><h2>Administration</h2><p>À venir...</p></div>
 }
