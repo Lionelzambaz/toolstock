@@ -65,14 +65,34 @@ export default function CatalogPage() {
         filteredPieces = filteredPieces.filter(p => p.fournisseur === supplierId)
       }
 
-      // Filtre projet
+      // Filtre projet (pièces DIRECTES + pièces des SOUS-ENSEMBLES du projet)
       if (projectId !== 'all') {
+        // Pièces liées directement au projet
         const { data: piecesInProject } = await supabase
           .from('project_pieces')
           .select('piece_id')
           .eq('project_id', projectId)
-        const pieceIds = piecesInProject?.map(p => p.piece_id) || []
-        filteredPieces = filteredPieces.filter(p => pieceIds.includes(p.id))
+        const pieceIdsInProject = piecesInProject?.map(p => p.piece_id) || []
+
+        // Pièces dans les sous-ensembles du projet
+        const { data: subAssInProject } = await supabase
+          .from('project_sub_assembly')
+          .select('sub_assembly_id')
+          .eq('project_id', projectId)
+        const subAssemblyIds = subAssInProject?.map(s => s.sub_assembly_id) || []
+
+        let pieceIdsInSubAssemblies = []
+        if (subAssemblyIds.length > 0) {
+          const { data: piecesInSubAss } = await supabase
+            .from('sub_assembly_pieces')
+            .select('piece_id')
+            .in('sub_assembly_id', subAssemblyIds)
+          pieceIdsInSubAssemblies = piecesInSubAss?.map(p => p.piece_id) || []
+        }
+
+        // Combiner: pièces directes OU pièces des sous-ensembles
+        const allPieceIds = [...new Set([...pieceIdsInProject, ...pieceIdsInSubAssemblies])]
+        filteredPieces = filteredPieces.filter(p => allPieceIds.includes(p.id))
       }
 
       // Filtre sous-ensemble
@@ -182,15 +202,34 @@ export default function CatalogPage() {
       filtered = filtered.filter(p => p.fournisseur === selectedSupplier)
     }
 
-    // Filtre projet (pièces liées au projet sélectionné)
+    // Filtre projet (pièces DIRECTES + pièces des SOUS-ENSEMBLES du projet)
     if (selectedProject !== 'all') {
+      // Pièces liées directement au projet
       const { data: piecesInProject } = await supabase
         .from('project_pieces')
         .select('piece_id')
         .eq('project_id', selectedProject)
-      
       const pieceIdsInProject = piecesInProject?.map(p => p.piece_id) || []
-      filtered = filtered.filter(p => pieceIdsInProject.includes(p.id))
+
+      // Pièces dans les sous-ensembles du projet
+      const { data: subAssInProject } = await supabase
+        .from('project_sub_assembly')
+        .select('sub_assembly_id')
+        .eq('project_id', selectedProject)
+      const subAssemblyIds = subAssInProject?.map(s => s.sub_assembly_id) || []
+
+      let pieceIdsInSubAssemblies = []
+      if (subAssemblyIds.length > 0) {
+        const { data: piecesInSubAss } = await supabase
+          .from('sub_assembly_pieces')
+          .select('piece_id')
+          .in('sub_assembly_id', subAssemblyIds)
+        pieceIdsInSubAssemblies = piecesInSubAss?.map(p => p.piece_id) || []
+      }
+
+      // Combiner: pièces directes OU pièces des sous-ensembles
+      const allPieceIds = [...new Set([...pieceIdsInProject, ...pieceIdsInSubAssemblies])]
+      filtered = filtered.filter(p => allPieceIds.includes(p.id))
     }
 
     // Filtre sous-ensemble (pièces dans le sous-ensemble sélectionné)
