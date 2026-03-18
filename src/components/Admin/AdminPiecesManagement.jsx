@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useAdmin } from '../../hooks/useAdmin'
+import { supabase } from '../../utils/supabaseClient'
 
 export default function AdminPiecesManagement() {
-  const { getPieces, createPiece, updatePiece, deletePiece, loading, error, success, clearMessages } = useAdmin()
+  const { getPieces, getProjects, createPiece, updatePiece, deletePiece, getProjectsForPiece, assignPieceToProject, removePieceFromProject, loading, error, success, clearMessages } = useAdmin()
   const [pieces, setPieces] = useState([])
+  const [projects, setProjects] = useState([])
   const [formData, setFormData] = useState({
     numero_fournisseur: '',
     numero_interne: '',
@@ -13,15 +15,18 @@ export default function AdminPiecesManagement() {
     prix_unitaire: ''
   })
   const [editingId, setEditingId] = useState(null)
+  const [selectedProjects, setSelectedProjects] = useState([])
+  const [newProjectId, setNewProjectId] = useState('')
 
-  // Charger les pièces au montage
   useEffect(() => {
-    loadPieces()
+    loadData()
   }, [])
 
-  const loadPieces = async () => {
-    const data = await getPieces()
-    setPieces(data)
+  const loadData = async () => {
+    const p = await getPieces()
+    const proj = await getProjects()
+    setPieces(p)
+    setProjects(proj)
   }
 
   const handleInputChange = (e) => {
@@ -36,27 +41,56 @@ export default function AdminPiecesManagement() {
     e.preventDefault()
     clearMessages()
 
-    if (editingId) {
-      await updatePiece(editingId, formData)
-      setEditingId(null)
+    let pieceId = editingId
+    if (!editingId) {
+      const result = await createPiece(formData)
+      if (result.success) pieceId = result.data.id
     } else {
-      await createPiece(formData)
+      await updatePiece(editingId, formData)
+    }
+
+    // Ajouter/mettre à jour les projets
+    if (pieceId && selectedProjects.length > 0) {
+      await supabase.from('project_pieces').delete().eq('piece_id', pieceId)
+      
+      for (const projectId of selectedProjects) {
+        await supabase.from('project_pieces').insert({
+          piece_id: pieceId,
+          project_id: projectId
+        })
+      }
     }
 
     setFormData({ numero_fournisseur: '', numero_interne: '', fournisseur: '', denomination: '', descriptif: '', prix_unitaire: '' })
-    await loadPieces()
+    setSelectedProjects([])
+    setEditingId(null)
+    await loadData()
   }
 
-  const handleEdit = (piece) => {
+  const handleEdit = async (piece) => {
     setFormData(piece)
     setEditingId(piece.id)
+    
+    const projForPiece = await getProjectsForPiece(piece.id)
+    setSelectedProjects(projForPiece.map(p => p.projects.id))
   }
 
   const handleDelete = async (id) => {
     if (confirm('Supprimer cette pièce?')) {
       await deletePiece(id)
-      await loadPieces()
+      await loadData()
     }
+  }
+
+  const handleAddProject = () => {
+    if (newProjectId && !selectedProjects.includes(newProjectId)) {
+      setSelectedProjects([...selectedProjects, newProjectId])
+      setNewProjectId('')
+    }
+  }
+
+  const handleRemoveProject = (projectId) => {
+    setSelectedProjects(selectedProjects.filter(p => p !== projectId))
   }
 
   return (
@@ -76,10 +110,39 @@ export default function AdminPiecesManagement() {
           <input type="number" name="prix_unitaire" placeholder="Prix unitaire (CHF)" value={formData.prix_unitaire} onChange={handleInputChange} step="0.01" required style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
           <textarea name="descriptif" placeholder="Descriptif" value={formData.descriptif} onChange={handleInputChange} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px', gridColumn: '1 / -1' }} />
         </div>
+
+        {/* Ajouter des projets */}
+        <h4 style={{ color: '#042C53', marginTop: '15px' }}>Projets utilisant cette pièce</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr auto', gap: '10px', marginBottom: '10px', alignItems: 'end' }}>
+          <select value={newProjectId} onChange={(e) => setNewProjectId(e.target.value)} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }}>
+            <option value="">Sélectionner un projet</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.nom}</option>
+            ))}
+          </select>
+          <button type="button" onClick={handleAddProject} style={{ padding: '8px 15px', backgroundColor: '#27500A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>➕ Ajouter</button>
+        </div>
+
+        {/* Projets sélectionnés */}
+        {selectedProjects.length > 0 && (
+          <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
+            <h5>Projets sélectionnés:</h5>
+            {selectedProjects.map((projectId) => {
+              const project = projects.find(p => p.id === projectId)
+              return (
+                <div key={projectId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px', padding: '5px', backgroundColor: '#E6F1FB', borderRadius: '4px' }}>
+                  <span>{project?.nom}</span>
+                  <button type="button" onClick={() => handleRemoveProject(projectId)} style={{ padding: '3px 8px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Supprimer</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         <button type="submit" disabled={loading} style={{ padding: '10px 20px', backgroundColor: '#185FA5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
           {editingId ? 'Mettre à jour' : 'Créer'}
         </button>
-        {editingId && <button type="button" onClick={() => { setEditingId(null); setFormData({ numero_fournisseur: '', numero_interne: '', fournisseur: '', denomination: '', descriptif: '', prix_unitaire: '' }) }} style={{ marginLeft: '10px', padding: '10px 20px', backgroundColor: '#888780', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Annuler</button>}
+        {editingId && <button type="button" onClick={() => { setEditingId(null); setFormData({ numero_fournisseur: '', numero_interne: '', fournisseur: '', denomination: '', descriptif: '', prix_unitaire: '' }); setSelectedProjects([]) }} style={{ marginLeft: '10px', padding: '10px 20px', backgroundColor: '#888780', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Annuler</button>}
       </form>
 
       {/* Tableau */}

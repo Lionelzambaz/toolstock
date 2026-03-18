@@ -3,17 +3,20 @@ import { useAdmin } from '../../hooks/useAdmin'
 import { supabase } from '../../utils/supabaseClient'
 
 export default function AdminSubAssembliesManagement() {
-  const { getSubAssemblies, createSubAssembly, updateSubAssembly, deleteSubAssembly, getPieces, loading, error, success, clearMessages } = useAdmin()
+  const { getSubAssemblies, getPieces, getProjects, createSubAssembly, updateSubAssembly, deleteSubAssembly, loading, error, success, clearMessages } = useAdmin()
   const [subAssemblies, setSubAssemblies] = useState([])
   const [pieces, setPieces] = useState([])
+  const [projects, setProjects] = useState([])
   const [formData, setFormData] = useState({
     nom: '',
     description: ''
   })
   const [editingId, setEditingId] = useState(null)
   const [selectedPieces, setSelectedPieces] = useState([])
+  const [selectedProjects, setSelectedProjects] = useState([])
   const [newPieceId, setNewPieceId] = useState('')
   const [newPieceQty, setNewPieceQty] = useState(1)
+  const [newProjectId, setNewProjectId] = useState('')
 
   useEffect(() => {
     loadData()
@@ -22,8 +25,10 @@ export default function AdminSubAssembliesManagement() {
   const loadData = async () => {
     const subAss = await getSubAssemblies()
     const p = await getPieces()
+    const proj = await getProjects()
     setSubAssemblies(subAss)
     setPieces(p)
+    setProjects(proj)
   }
 
   const handleInputChange = (e) => {
@@ -43,6 +48,17 @@ export default function AdminSubAssembliesManagement() {
     setSelectedPieces(selectedPieces.filter((_, i) => i !== idx))
   }
 
+  const handleAddProject = () => {
+    if (newProjectId && !selectedProjects.includes(newProjectId)) {
+      setSelectedProjects([...selectedProjects, newProjectId])
+      setNewProjectId('')
+    }
+  }
+
+  const handleRemoveProject = (projectId) => {
+    setSelectedProjects(selectedProjects.filter(p => p !== projectId))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     clearMessages()
@@ -57,10 +73,8 @@ export default function AdminSubAssembliesManagement() {
 
     // Ajouter/mettre à jour les pièces
     if (subAssId && selectedPieces.length > 0) {
-      // Supprimer les anciennes relations
       await supabase.from('sub_assembly_pieces').delete().eq('sub_assembly_id', subAssId)
       
-      // Ajouter les nouvelles
       for (const piece of selectedPieces) {
         await supabase.from('sub_assembly_pieces').insert({
           sub_assembly_id: subAssId,
@@ -70,8 +84,21 @@ export default function AdminSubAssembliesManagement() {
       }
     }
 
+    // Ajouter/mettre à jour les projets
+    if (subAssId && selectedProjects.length > 0) {
+      await supabase.from('project_sub_assembly').delete().eq('sub_assembly_id', subAssId)
+      
+      for (const projectId of selectedProjects) {
+        await supabase.from('project_sub_assembly').insert({
+          sub_assembly_id: subAssId,
+          project_id: projectId
+        })
+      }
+    }
+
     setFormData({ nom: '', description: '' })
     setSelectedPieces([])
+    setSelectedProjects([])
     setEditingId(null)
     await loadData()
   }
@@ -81,12 +108,20 @@ export default function AdminSubAssembliesManagement() {
     setEditingId(subAssembly.id)
     
     // Charger les pièces de ce sous-ensemble
-    const { data } = await supabase
+    const { data: piecesData } = await supabase
       .from('sub_assembly_pieces')
       .select('*')
       .eq('sub_assembly_id', subAssembly.id)
     
-    setSelectedPieces(data || [])
+    setSelectedPieces(piecesData || [])
+
+    // Charger les projets de ce sous-ensemble
+    const { data: projectsData } = await supabase
+      .from('project_sub_assembly')
+      .select('project_id')
+      .eq('sub_assembly_id', subAssembly.id)
+    
+    setSelectedProjects(projectsData?.map(p => p.project_id) || [])
   }
 
   const handleDelete = async (id) => {
@@ -111,6 +146,7 @@ export default function AdminSubAssembliesManagement() {
         </div>
 
         {/* Ajouter des pièces */}
+        <h4 style={{ color: '#042C53', marginTop: '15px' }}>Pièces du sous-ensemble</h4>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '10px', marginBottom: '10px', alignItems: 'end' }}>
           <select value={newPieceId} onChange={(e) => setNewPieceId(e.target.value)} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }}>
             <option value="">Sélectionner une pièce</option>
@@ -125,7 +161,7 @@ export default function AdminSubAssembliesManagement() {
         {/* Pièces sélectionnées */}
         {selectedPieces.length > 0 && (
           <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
-            <h4>Pièces sélectionnées:</h4>
+            <h5>Pièces sélectionnées:</h5>
             {selectedPieces.map((sp, idx) => {
               const piece = pieces.find(p => p.id === sp.piece_id)
               return (
@@ -138,10 +174,38 @@ export default function AdminSubAssembliesManagement() {
           </div>
         )}
 
+        {/* Ajouter des projets */}
+        <h4 style={{ color: '#042C53', marginTop: '15px' }}>Projets utilisant ce sous-ensemble</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr auto', gap: '10px', marginBottom: '10px', alignItems: 'end' }}>
+          <select value={newProjectId} onChange={(e) => setNewProjectId(e.target.value)} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }}>
+            <option value="">Sélectionner un projet</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.nom}</option>
+            ))}
+          </select>
+          <button type="button" onClick={handleAddProject} style={{ padding: '8px 15px', backgroundColor: '#27500A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>➕ Ajouter</button>
+        </div>
+
+        {/* Projets sélectionnés */}
+        {selectedProjects.length > 0 && (
+          <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
+            <h5>Projets sélectionnés:</h5>
+            {selectedProjects.map((projectId) => {
+              const project = projects.find(p => p.id === projectId)
+              return (
+                <div key={projectId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px', padding: '5px', backgroundColor: '#E6F1FB', borderRadius: '4px' }}>
+                  <span>{project?.nom}</span>
+                  <button type="button" onClick={() => handleRemoveProject(projectId)} style={{ padding: '3px 8px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Supprimer</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         <button type="submit" disabled={loading} style={{ padding: '10px 20px', backgroundColor: '#185FA5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
           {editingId ? 'Mettre à jour' : 'Créer'}
         </button>
-        {editingId && <button type="button" onClick={() => { setEditingId(null); setFormData({ nom: '', description: '' }); setSelectedPieces([]) }} style={{ marginLeft: '10px', padding: '10px 20px', backgroundColor: '#888780', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Annuler</button>}
+        {editingId && <button type="button" onClick={() => { setEditingId(null); setFormData({ nom: '', description: '' }); setSelectedPieces([]); setSelectedProjects([]) }} style={{ marginLeft: '10px', padding: '10px 20px', backgroundColor: '#888780', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Annuler</button>}
       </form>
 
       {/* Tableau */}

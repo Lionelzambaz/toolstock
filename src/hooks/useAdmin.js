@@ -247,11 +247,69 @@ export function useAdmin() {
     setSuccess(null)
   }, [])
 
+  // ===== PROJECT_PIECES (Liaison Projet ↔ Pièce) =====
+  const getProjectsForPiece = useCallback(async (pieceId) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const { data, error: err } = await supabase
+        .from('project_pieces')
+        .select('project_id, projects(id, nom)')
+        .eq('piece_id', pieceId)
+      if (err) throw err
+      return data || []
+    } catch (err) {
+      setError(err.message)
+      return []
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const assignPieceToProject = useCallback(async (pieceId, projectId) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const { error: err } = await supabase
+        .from('project_pieces')
+        .insert({ piece_id: pieceId, project_id: projectId })
+      if (err) throw err
+      setSuccess('Pièce assignée au projet')
+      return { success: true }
+    } catch (err) {
+      setError(err.message)
+      return { success: false }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const removePieceFromProject = useCallback(async (pieceId, projectId) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const { error: err } = await supabase
+        .from('project_pieces')
+        .delete()
+        .eq('piece_id', pieceId)
+        .eq('project_id', projectId)
+      if (err) throw err
+      setSuccess('Pièce retirée du projet')
+      return { success: true }
+    } catch (err) {
+      setError(err.message)
+      return { success: false }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   return {
     loading, error, success, clearMessages,
     getPieces, createPiece, updatePiece, deletePiece,
     getProjects, createProject, updateProject, deleteProject,
     getSubAssemblies, createSubAssembly, updateSubAssembly, deleteSubAssembly,
-    getUsers, updateUser, deleteUser
+    getUsers, updateUser, deleteUser,
+    getProjectsForPiece, assignPieceToProject, removePieceFromProject
   }
 }
