@@ -3,9 +3,10 @@ import { useAdmin } from '../../hooks/useAdmin'
 import { supabase } from '../../utils/supabaseClient'
 
 export default function AdminPiecesManagement() {
-  const { getPieces, getProjects, createPiece, updatePiece, deletePiece, getProjectsForPiece, assignPieceToProject, removePieceFromProject, loading, error, success, clearMessages } = useAdmin()
+  const { getPieces, getProjects, getSubAssemblies, createPiece, updatePiece, deletePiece, getProjectsForPiece, assignPieceToProject, removePieceFromProject, loading, error, success, clearMessages } = useAdmin()
   const [pieces, setPieces] = useState([])
   const [projects, setProjects] = useState([])
+  const [subAssemblies, setSubAssemblies] = useState([])
   const [formData, setFormData] = useState({
     numero_fournisseur: '',
     numero_interne: '',
@@ -16,7 +17,10 @@ export default function AdminPiecesManagement() {
   })
   const [editingId, setEditingId] = useState(null)
   const [selectedProjects, setSelectedProjects] = useState([])
+  const [selectedSubAssemblies, setSelectedSubAssemblies] = useState([])
   const [newProjectId, setNewProjectId] = useState('')
+  const [newSubAssemblyId, setNewSubAssemblyId] = useState('')
+  const [newSubAssemblyQty, setNewSubAssemblyQty] = useState(1)
 
   useEffect(() => {
     loadData()
@@ -25,8 +29,10 @@ export default function AdminPiecesManagement() {
   const loadData = async () => {
     const p = await getPieces()
     const proj = await getProjects()
+    const subAss = await getSubAssemblies()
     setPieces(p)
     setProjects(proj)
+    setSubAssemblies(subAss)
   }
 
   const handleInputChange = (e) => {
@@ -41,38 +47,31 @@ export default function AdminPiecesManagement() {
     e.preventDefault()
     clearMessages()
 
-    let pieceId = editingId
-    if (!editingId) {
-      const result = await createPiece(formData)
-      if (result.success) pieceId = result.data.id
-    } else {
+    if (editingId) {
       await updatePiece(editingId, formData)
-    }
-
-    // Ajouter/mettre à jour les projets
-    if (pieceId && selectedProjects.length > 0) {
-      await supabase.from('project_pieces').delete().eq('piece_id', pieceId)
-      
-      for (const projectId of selectedProjects) {
-        await supabase.from('project_pieces').insert({
-          piece_id: pieceId,
-          project_id: projectId
-        })
-      }
+      setEditingId(null)
+    } else {
+      await createPiece(formData)
     }
 
     setFormData({ numero_fournisseur: '', numero_interne: '', fournisseur: '', denomination: '', descriptif: '', prix_unitaire: '' })
     setSelectedProjects([])
-    setEditingId(null)
+    setSelectedSubAssemblies([])
     await loadData()
   }
 
   const handleEdit = async (piece) => {
     setFormData(piece)
     setEditingId(piece.id)
-    
     const projForPiece = await getProjectsForPiece(piece.id)
     setSelectedProjects(projForPiece.map(p => p.projects.id))
+    
+    // Récupérer les sous-ensembles
+    const { data: subAssData } = await supabase
+      .from('sub_assembly_pieces')
+      .select('sub_assembly_id, quantite')
+      .eq('piece_id', piece.id)
+    setSelectedSubAssemblies(subAssData || [])
   }
 
   const handleDelete = async (id) => {
@@ -82,15 +81,45 @@ export default function AdminPiecesManagement() {
     }
   }
 
-  const handleAddProject = () => {
-    if (newProjectId && !selectedProjects.includes(newProjectId)) {
-      setSelectedProjects([...selectedProjects, newProjectId])
+  const handleAddProject = async (pieceId) => {
+    if (newProjectId) {
+      await assignPieceToProject(pieceId, newProjectId)
       setNewProjectId('')
+      const projForPiece = await getProjectsForPiece(pieceId)
+      setSelectedProjects(projForPiece.map(p => p.projects.id))
     }
   }
 
-  const handleRemoveProject = (projectId) => {
-    setSelectedProjects(selectedProjects.filter(p => p !== projectId))
+  const handleRemoveProject = async (pieceId, projectId) => {
+    await removePieceFromProject(pieceId, projectId)
+    const projForPiece = await getProjectsForPiece(pieceId)
+    setSelectedProjects(projForPiece.map(p => p.projects.id))
+  }
+
+  const handleAddSubAssembly = async (pieceId) => {
+    if (newSubAssemblyId && newSubAssemblyQty > 0) {
+      await supabase.from('sub_assembly_pieces').insert({
+        piece_id: pieceId,
+        sub_assembly_id: newSubAssemblyId,
+        quantite: parseInt(newSubAssemblyQty)
+      })
+      setNewSubAssemblyId('')
+      setNewSubAssemblyQty(1)
+      const { data: subAssData } = await supabase
+        .from('sub_assembly_pieces')
+        .select('sub_assembly_id, quantite')
+        .eq('piece_id', pieceId)
+      setSelectedSubAssemblies(subAssData || [])
+    }
+  }
+
+  const handleRemoveSubAssembly = async (pieceId, subAssemblyId) => {
+    await supabase.from('sub_assembly_pieces').delete().eq('piece_id', pieceId).eq('sub_assembly_id', subAssemblyId)
+    const { data: subAssData } = await supabase
+      .from('sub_assembly_pieces')
+      .select('sub_assembly_id, quantite')
+      .eq('piece_id', pieceId)
+    setSelectedSubAssemblies(subAssData || [])
   }
 
   return (
@@ -111,7 +140,7 @@ export default function AdminPiecesManagement() {
           <textarea name="descriptif" placeholder="Descriptif" value={formData.descriptif} onChange={handleInputChange} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px', gridColumn: '1 / -1' }} />
         </div>
 
-        {/* Ajouter des projets */}
+        {/* Projets */}
         <h4 style={{ color: '#042C53', marginTop: '15px' }}>Projets utilisant cette pièce</h4>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr auto', gap: '10px', marginBottom: '10px', alignItems: 'end' }}>
           <select value={newProjectId} onChange={(e) => setNewProjectId(e.target.value)} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }}>
@@ -120,19 +149,46 @@ export default function AdminPiecesManagement() {
               <option key={p.id} value={p.id}>{p.nom}</option>
             ))}
           </select>
-          <button type="button" onClick={handleAddProject} style={{ padding: '8px 15px', backgroundColor: '#27500A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>➕ Ajouter</button>
+          <button type="button" onClick={() => editingId && handleAddProject(editingId)} disabled={!editingId || !newProjectId} style={{ padding: '8px 15px', backgroundColor: '#27500A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>➕ Ajouter</button>
         </div>
 
-        {/* Projets sélectionnés */}
         {selectedProjects.length > 0 && (
           <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
             <h5>Projets sélectionnés:</h5>
-            {selectedProjects.map((projectId) => {
-              const project = projects.find(p => p.id === projectId)
+            {selectedProjects.map((projId) => {
+              const proj = projects.find(p => p.id === projId)
               return (
-                <div key={projectId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px', padding: '5px', backgroundColor: '#E6F1FB', borderRadius: '4px' }}>
-                  <span>{project?.nom}</span>
-                  <button type="button" onClick={() => handleRemoveProject(projectId)} style={{ padding: '3px 8px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Supprimer</button>
+                <div key={projId} style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#D4E5F7', padding: '3px 5px', borderRadius: '3px', marginBottom: '2px' }}>
+                  <span>{proj?.nom}</span>
+                  <button type="button" onClick={() => editingId && handleRemoveProject(editingId, projId)} style={{ padding: '0px 4px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '10px' }}>✕</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Sous-ensembles */}
+        <h4 style={{ color: '#042C53', marginTop: '15px' }}>Sous-ensembles utilisant cette pièce</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '10px', marginBottom: '10px', alignItems: 'end' }}>
+          <select value={newSubAssemblyId} onChange={(e) => setNewSubAssemblyId(e.target.value)} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }}>
+            <option value="">Sélectionner un sous-ensemble</option>
+            {subAssemblies.map(s => (
+              <option key={s.id} value={s.id}>{s.nom}</option>
+            ))}
+          </select>
+          <input type="number" value={newSubAssemblyQty} onChange={(e) => setNewSubAssemblyQty(e.target.value)} min="1" style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
+          <button type="button" onClick={() => editingId && handleAddSubAssembly(editingId)} disabled={!editingId || !newSubAssemblyId} style={{ padding: '8px 15px', backgroundColor: '#27500A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>➕ Ajouter</button>
+        </div>
+
+        {selectedSubAssemblies.length > 0 && (
+          <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
+            <h5>Sous-ensembles sélectionnés:</h5>
+            {selectedSubAssemblies.map((subAssItem) => {
+              const subAss = subAssemblies.find(s => s.id === subAssItem.sub_assembly_id)
+              return (
+                <div key={subAssItem.sub_assembly_id} style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#D4E5F7', padding: '3px 5px', borderRadius: '3px', marginBottom: '2px' }}>
+                  <span>{subAss?.nom} (× {subAssItem.quantite})</span>
+                  <button type="button" onClick={() => editingId && handleRemoveSubAssembly(editingId, subAssItem.sub_assembly_id)} style={{ padding: '0px 4px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '10px' }}>✕</button>
                 </div>
               )
             })}
@@ -142,7 +198,7 @@ export default function AdminPiecesManagement() {
         <button type="submit" disabled={loading} style={{ padding: '10px 20px', backgroundColor: '#185FA5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
           {editingId ? 'Mettre à jour' : 'Créer'}
         </button>
-        {editingId && <button type="button" onClick={() => { setEditingId(null); setFormData({ numero_fournisseur: '', numero_interne: '', fournisseur: '', denomination: '', descriptif: '', prix_unitaire: '' }); setSelectedProjects([]) }} style={{ marginLeft: '10px', padding: '10px 20px', backgroundColor: '#888780', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Annuler</button>}
+        {editingId && <button type="button" onClick={() => { setEditingId(null); setFormData({ numero_fournisseur: '', numero_interne: '', fournisseur: '', denomination: '', descriptif: '', prix_unitaire: '' }); setSelectedProjects([]); setSelectedSubAssemblies([]) }} style={{ marginLeft: '10px', padding: '10px 20px', backgroundColor: '#888780', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Annuler</button>}
       </form>
 
       {/* Tableau */}

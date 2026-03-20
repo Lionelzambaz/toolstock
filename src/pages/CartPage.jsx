@@ -9,6 +9,7 @@ export default function CartPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [projectId, setProjectId] = useState('')
+  const [remarques, setRemarques] = useState('')
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -56,7 +57,8 @@ export default function CartPage() {
         .insert({
           user_id: user.id,
           project_id: projectId,
-          status: 'pending'
+          status: 'pending',
+          remarques: remarques || null
         })
         .select()
         .single()
@@ -79,6 +81,7 @@ export default function CartPage() {
 
       // Vider le panier et rediriger
       clearCart()
+      setRemarques('')
       alert('Commande créée avec succès !')
       navigate('/commands')
     } catch (err) {
@@ -186,6 +189,18 @@ export default function CartPage() {
                   ))}
                 </select>
               )}
+            </div>
+
+            {/* Remarques */}
+            <div style={styles.remarquesBox}>
+              <label style={styles.label}>📝 Remarques (optionnel)</label>
+              <textarea
+                value={remarques}
+                onChange={(e) => setRemarques(e.target.value)}
+                placeholder="Ajouter une remarque pour cette commande..."
+                style={styles.textarea}
+                disabled={loading}
+              />
             </div>
 
             <div style={styles.buttonGroup}>
@@ -305,6 +320,12 @@ const styles = {
   projectSelection: {
     marginBottom: '20px'
   },
+  remarquesBox: {
+    marginBottom: '20px',
+    padding: '15px',
+    backgroundColor: '#E6F1FB',
+    borderRadius: '8px'
+  },
   label: {
     display: 'block',
     fontSize: '14px',
@@ -318,6 +339,16 @@ const styles = {
     border: '1px solid #ddd',
     borderRadius: '6px',
     fontSize: '14px',
+    boxSizing: 'border-box'
+  },
+  textarea: {
+    width: '100%',
+    padding: '10px',
+    border: '1px solid #185FA5',
+    borderRadius: '4px',
+    fontSize: '14px',
+    minHeight: '80px',
+    fontFamily: 'Arial, sans-serif',
     boxSizing: 'border-box'
   },
   buttonGroup: {

@@ -11,21 +11,21 @@ export default function CommandsPage() {
   const [selectedCommand, setSelectedCommand] = useState(null)
   const [commandDetails, setCommandDetails] = useState(null)
 
-useEffect(() => {
-  if (user?.id) {
-    fetchCommands()
-  }
-}, [user?.id])
+  useEffect(() => {
+    if (user?.id) {
+      fetchCommands()
+    }
+  }, [user?.id])
 
-async function fetchCommands() {
-  try {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('commands')
-      .select(`
-        *,
-        projects(nom, numero_projet)
-      `)
+  async function fetchCommands() {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('commands')
+        .select(`
+          *,
+          projects(nom, numero_projet)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
       
@@ -63,6 +63,19 @@ async function fetchCommands() {
   function closeDetails() {
     setSelectedCommand(null)
     setCommandDetails(null)
+  }
+
+  async function handleDeleteCommand(commandId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette commande?')) {
+      try {
+        const { error } = await supabase.from('commands').delete().eq('id', commandId)
+        if (error) throw error
+        await fetchCommands()
+      } catch (err) {
+        console.error('Erreur suppression:', err)
+        alert('Erreur lors de la suppression')
+      }
+    }
   }
 
   const filteredCommands = filterStatus 
@@ -153,10 +166,19 @@ async function fetchCommands() {
               <div style={styles.cardFooter}>
                 <button
                   onClick={() => handleViewCommand(command)}
-                  style={styles.viewBtn}
+                  style={{...styles.viewBtn, flex: 1}}
                 >
                   Voir les détails
                 </button>
+                
+                {(command.status === 'draft' || command.status === 'pending') && (
+                  <button
+                    onClick={() => handleDeleteCommand(command.id)}
+                    style={styles.deleteBtn}
+                  >
+                    🗑️ Supprimer
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -182,6 +204,13 @@ async function fetchCommands() {
                   {getStatusLabel(selectedCommand.status)}
                 </span>
               </p>
+
+              {selectedCommand.remarques && (
+                <div style={styles.remarquesBox}>
+                  <strong>📝 Remarques :</strong>
+                  <p>{selectedCommand.remarques}</p>
+                </div>
+              )}
 
               {selectedCommand.supervisor_comments && (
                 <div style={styles.comments}>
@@ -317,7 +346,6 @@ const styles = {
     gap: '10px'
   },
   viewBtn: {
-    flex: 1,
     padding: '10px',
     backgroundColor: '#185FA5',
     color: 'white',
@@ -325,6 +353,16 @@ const styles = {
     borderRadius: '6px',
     cursor: 'pointer',
     fontSize: '14px'
+  },
+  deleteBtn: {
+    padding: '10px 15px',
+    backgroundColor: '#A32D2D',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 'bold'
   },
   modal: {
     position: 'fixed',
@@ -362,6 +400,14 @@ const styles = {
   },
   modalBody: {
     padding: '20px'
+  },
+  remarquesBox: {
+    backgroundColor: '#E6F1FB',
+    padding: '15px',
+    borderRadius: '6px',
+    marginTop: '15px',
+    marginBottom: '15px',
+    borderLeft: '4px solid #185FA5'
   },
   comments: {
     backgroundColor: '#f5f5f5',

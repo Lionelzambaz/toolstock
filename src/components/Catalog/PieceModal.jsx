@@ -86,12 +86,12 @@ export default function PieceModal({ piece, isOpen, onClose, onAddToCart }) {
         {/* Projets */}
         {projects.length > 0 && (
           <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#F0F8FF', borderRadius: '6px' }}>
-            <h4 style={{ color: '#042C53', marginTop: '0' }}>🏢 Projets liés</h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <h4 style={{ color: '#042C53', marginTop: '0', marginBottom: '10px' }}>🏢 Projets liés</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {projects.map(proj => (
-                <span key={proj.id} style={{ padding: '6px 12px', backgroundColor: '#185FA5', color: 'white', borderRadius: '20px', fontSize: '13px' }}>
-                  {proj.nom}
-                </span>
+                <div key={proj.id} style={{ display: 'flex', alignItems: 'center', padding: '8px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #E6F1FB' }}>
+                  <span style={{ color: '#042C53', fontWeight: '500' }}>{proj.nom}</span>
+                </div>
               ))}
             </div>
           </div>
@@ -100,8 +100,8 @@ export default function PieceModal({ piece, isOpen, onClose, onAddToCart }) {
         {/* Sous-ensembles */}
         {subAssemblies.length > 0 && (
           <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#F0F8FF', borderRadius: '6px' }}>
-            <h4 style={{ color: '#042C53', marginTop: '0' }}>🔩 Sous-ensembles</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <h4 style={{ color: '#042C53', marginTop: '0', marginBottom: '10px' }}>🔩 Sous-ensembles</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {subAssemblies.map(subAsses => (
                 <div key={subAsses.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #E6F1FB' }}>
                   <span style={{ color: '#042C53', fontWeight: '500' }}>{subAsses.nom}</span>

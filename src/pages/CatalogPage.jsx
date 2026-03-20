@@ -5,7 +5,7 @@ import PieceCard from '../components/Catalog/PieceCard'
 import PieceModal from '../components/Catalog/PieceModal'
 
 export default function CatalogPage() {
-  const { addToCart } = useCart()
+  const { addItem } = useCart()
   const [pieces, setPieces] = useState([])
   const [projects, setProjects] = useState([])
   const [subAssemblies, setSubAssemblies] = useState([])
@@ -23,9 +23,10 @@ export default function CatalogPage() {
   const [availableProjects, setAvailableProjects] = useState([])
   const [availableSubAssemblies, setAvailableSubAssemblies] = useState([])
 
-  // Modale
+  // Modale et notification
   const [selectedPiece, setSelectedPiece] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [notification, setNotification] = useState(null)
 
   useEffect(() => {
     loadData()
@@ -253,171 +254,213 @@ export default function CatalogPage() {
   }, [searchText, selectedSupplier, selectedProject, selectedSubAssembly, pieces])
 
   const handleAddToCart = (piece, quantity) => {
-    addToCart(piece, quantity)
+    addItem(piece, quantity)
     setIsModalOpen(false)
     setSelectedPiece(null)
+    
+    // Afficher notification
+    setNotification(`✅ ${quantity}× ${piece.denomination} ajouté au panier!`)
+    
+    // Masquer après 3 secondes
+    setTimeout(() => setNotification(null), 3000)
   }
 
   if (loading) return <div style={{ padding: '20px' }}>Chargement du catalogue...</div>
   if (error) return <div style={{ padding: '20px', color: '#A32D2D' }}>Erreur: {error}</div>
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* HEADER */}
-      <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ color: '#042C53', marginTop: '0' }}>Catalogue de pièces</h1>
-        <p style={{ color: '#888780' }}>{filteredPieces.length} pièce(s) trouvée(s)</p>
-      </div>
-
-      {/* FILTRES - BARRE HORIZONTALE */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '12px',
-        marginBottom: '25px',
-        padding: '15px',
-        backgroundColor: '#E6F1FB',
-        borderRadius: '8px'
-      }}>
-        <div>
-          <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🔍 Recherche</label>
-          <input
-            type="text"
-            placeholder="N° interne, dénomination..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #185FA5',
-              borderRadius: '4px',
-              fontSize: '13px',
-              boxSizing: 'border-box'
-            }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🏭 Fournisseur</label>
-          <select
-            value={selectedSupplier}
-            onChange={(e) => handleSupplierChange(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #185FA5',
-              borderRadius: '4px',
-              fontSize: '13px',
-              boxSizing: 'border-box'
-            }}
-          >
-            <option value="all">Tous</option>
-            {availableSuppliers.map(sup => (
-              <option key={sup} value={sup}>{sup}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🏢 Projet</label>
-          <select
-            value={selectedProject}
-            onChange={(e) => handleProjectChange(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #185FA5',
-              borderRadius: '4px',
-              fontSize: '13px',
-              boxSizing: 'border-box'
-            }}
-          >
-            <option value="all">Tous les projets</option>
-            {availableProjects.map(proj => (
-              <option key={proj.id} value={proj.id}>{proj.nom}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🔩 Sous-ensemble</label>
-          <select
-            value={selectedSubAssembly}
-            onChange={(e) => handleSubAssemblyChange(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #185FA5',
-              borderRadius: '4px',
-              fontSize: '13px',
-              boxSizing: 'border-box'
-            }}
-          >
-            <option value="all">Tous</option>
-            {availableSubAssemblies.map(sub => (
-              <option key={sub.id} value={sub.id}>{sub.nom}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>&nbsp;</label>
-          <button
-            onClick={() => {
-              setSearchText('')
-              setSelectedSupplier('all')
-              setSelectedProject('all')
-              setSelectedSubAssembly('all')
-              updateAvailableFilters('all', 'all', 'all')
-            }}
-            style={{
-              width: '100%',
-              padding: '8px',
-              backgroundColor: '#888780',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: 'bold'
-            }}
-          >
-            ↻ Réinitialiser
-          </button>
-        </div>
-      </div>
-
-      {/* GRILLE DE CARTES - VERTICALES, EMPILÉES */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr',
-        gap: '15px'
-      }}>
-        {filteredPieces.map(piece => (
-          <PieceCard
-            key={piece.id}
-            piece={piece}
-            onViewDetails={(p) => {
-              setSelectedPiece(p)
-              setIsModalOpen(true)
-            }}
-          />
-        ))}
-      </div>
-
-      {filteredPieces.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#888780' }}>
-          <p>Aucune pièce ne correspond à vos critères</p>
+    <>
+      {/* Notification */}
+      {notification && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: '#27500A',
+          color: 'white',
+          padding: '15px 20px',
+          borderRadius: '6px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+          zIndex: 2000,
+          fontSize: '14px',
+          fontWeight: 'bold',
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          {notification}
         </div>
       )}
 
-      {/* MODALE */}
-      <PieceModal
-        piece={selectedPiece}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onAddToCart={handleAddToCart}
-      />
-    </div>
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(400px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+
+      <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+        {/* HEADER */}
+        <div style={{ marginBottom: '20px' }}>
+          <h1 style={{ color: '#042C53', marginTop: '0' }}>Catalogue de pièces</h1>
+          <p style={{ color: '#888780' }}>{filteredPieces.length} pièce(s) trouvée(s)</p>
+        </div>
+
+        {/* FILTRES - BARRE HORIZONTALE */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '12px',
+          marginBottom: '25px',
+          padding: '15px',
+          backgroundColor: '#E6F1FB',
+          borderRadius: '8px'
+        }}>
+          <div>
+            <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🔍 Recherche</label>
+            <input
+              type="text"
+              placeholder="N° interne, dénomination..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #185FA5',
+                borderRadius: '4px',
+                fontSize: '13px',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🏭 Fournisseur</label>
+            <select
+              value={selectedSupplier}
+              onChange={(e) => handleSupplierChange(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #185FA5',
+                borderRadius: '4px',
+                fontSize: '13px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <option value="all">Tous</option>
+              {availableSuppliers.map(sup => (
+                <option key={sup} value={sup}>{sup}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🏢 Projet</label>
+            <select
+              value={selectedProject}
+              onChange={(e) => handleProjectChange(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #185FA5',
+                borderRadius: '4px',
+                fontSize: '13px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <option value="all">Tous les projets</option>
+              {availableProjects.map(proj => (
+                <option key={proj.id} value={proj.id}>{proj.nom}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🔩 Sous-ensemble</label>
+            <select
+              value={selectedSubAssembly}
+              onChange={(e) => handleSubAssemblyChange(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #185FA5',
+                borderRadius: '4px',
+                fontSize: '13px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <option value="all">Tous</option>
+              {availableSubAssemblies.map(sub => (
+                <option key={sub.id} value={sub.id}>{sub.nom}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>&nbsp;</label>
+            <button
+              onClick={() => {
+                setSearchText('')
+                setSelectedSupplier('all')
+                setSelectedProject('all')
+                setSelectedSubAssembly('all')
+                updateAvailableFilters('all', 'all', 'all')
+              }}
+              style={{
+                width: '100%',
+                padding: '8px',
+                backgroundColor: '#888780',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 'bold'
+              }}
+            >
+              ↻ Réinitialiser
+            </button>
+          </div>
+        </div>
+
+        {/* GRILLE DE CARTES - VERTICALES, EMPILÉES */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gap: '15px'
+        }}>
+          {filteredPieces.map(piece => (
+            <PieceCard
+              key={piece.id}
+              piece={piece}
+              onViewDetails={(p) => {
+                setSelectedPiece(p)
+                setIsModalOpen(true)
+              }}
+              onAddToCart={handleAddToCart}
+            />
+          ))}
+        </div>
+
+        {filteredPieces.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#888780' }}>
+            <p>Aucune pièce ne correspond à vos critères</p>
+          </div>
+        )}
+
+        {/* MODALE */}
+        <PieceModal
+          piece={selectedPiece}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onAddToCart={handleAddToCart}
+        />
+      </div>
+    </>
   )
 }

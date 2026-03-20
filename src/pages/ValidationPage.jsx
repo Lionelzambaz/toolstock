@@ -16,27 +16,27 @@ export default function ValidationPage() {
     fetchPendingCommands()
   }, [])
 
-        async function fetchPendingCommands() {
-        try {
-            setLoading(true)
-            const { data, error } = await supabase
-            .from('commands')
-            .select(`
-                *,
-                projects(nom, numero_projet),
-                users!user_id(nom)
-            `)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: true })
-            
-            if (error) throw error
-            setCommands(data || [])
-        } catch (err) {
-            setError(err.message)
-        } finally {
-            setLoading(false)
-        }
-        }
+  async function fetchPendingCommands() {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('commands')
+        .select(`
+          *,
+          projects(nom, numero_projet),
+          users!user_id(nom)
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+      
+      if (error) throw error
+      setCommands(data || [])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function fetchCommandDetails(commandId) {
     try {
@@ -209,12 +209,19 @@ export default function ValidationPage() {
             <div style={styles.detailPanel}>
               <h3 style={styles.panelTitle}>Détails de la commande</h3>
 
-                <div style={styles.commandInfo}>
+              <div style={styles.commandInfo}>
                 <p><strong>Commande :</strong> #{selectedCommand.id.slice(0, 8).toUpperCase()}</p>
                 <p><strong>Date :</strong> {new Date(selectedCommand.created_at).toLocaleDateString('fr-CH')}</p>
                 <p><strong>Projet :</strong> {selectedCommand.projects?.nom}</p>
                 <p><strong>Créée par :</strong> {selectedCommand.users?.nom || 'Utilisateur inconnu'}</p>
+              </div>
+
+              {selectedCommand.remarques && (
+                <div style={styles.remarquesBox}>
+                  <strong>📝 Remarques du créateur :</strong>
+                  <p>{selectedCommand.remarques}</p>
                 </div>
+              )}
 
               {commandDetails && commandDetails.length > 0 && (
                 <div>
@@ -391,6 +398,13 @@ const styles = {
   },
   commandInfo: {
     backgroundColor: '#f5f5f5',
+    padding: '15px',
+    borderRadius: '6px',
+    marginBottom: '20px',
+    borderLeft: '4px solid #185FA5'
+  },
+  remarquesBox: {
+    backgroundColor: '#E6F1FB',
     padding: '15px',
     borderRadius: '6px',
     marginBottom: '20px',
