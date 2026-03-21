@@ -46,7 +46,7 @@ export function Layout({ children }) {
             <NavLink href="/commands" icon="📋">
               Mes commandes
             </NavLink>
-            {userProfile?.role === 'supervisor' && (
+            {(userProfile?.role === 'supervisor' || userProfile?.role === 'admin') && (
               <NavLink href="/validation" icon="✅">
                 Validation
               </NavLink>

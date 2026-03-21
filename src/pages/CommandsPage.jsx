@@ -8,6 +8,8 @@ export default function CommandsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [filterStatus, setFilterStatus] = useState('')
+  const [filterProject, setFilterProject] = useState('')
+  const [filterCreator, setFilterCreator] = useState('')
   const [selectedCommand, setSelectedCommand] = useState(null)
   const [commandDetails, setCommandDetails] = useState(null)
 
@@ -20,14 +22,27 @@ export default function CommandsPage() {
   async function fetchCommands() {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+      
+      // Construire la query selon le rôle
+      let query = supabase
         .from('commands')
         .select(`
           *,
-          projects(nom, numero_projet)
+          projects(nom, numero_projet),
+          users!user_id(nom),
+          command_items(id)
         `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+                      
+      // Mécanicien: Voit SES commandes
+      // Chef/Admin: Voient TOUTES les commandes
+      if (userProfile?.role === 'mechanic') {
+        query = query.eq('user_id', user.id)
+      }
+      // Chef et Admin voient tout, pas besoin de filtre
+      
+      query = query.order('created_at', { ascending: false })
+      
+      const { data, error } = await query
       
       if (error) throw error
       setCommands(data || [])
@@ -55,10 +70,28 @@ export default function CommandsPage() {
     }
   }
 
-  function handleViewCommand(command) {
-    setSelectedCommand(command)
-    fetchCommandDetails(command.id)
-  }
+    async function handleViewCommand(command) {
+      setSelectedCommand(command)
+      fetchCommandDetails(command.id)
+      
+      // Récupérer le nom du supervisor si existe
+      if (command.supervisor_id) {
+        try {
+          const { data } = await supabase
+            .from('users')
+            .select('nom')
+            .eq('id', command.supervisor_id)
+            .single()
+          
+          if (data) {
+            command.supervisor_nom = data.nom
+            setSelectedCommand({...command})
+          }
+        } catch (err) {
+          console.error('Erreur supervisor:', err)
+        }
+      }
+    }
 
   function closeDetails() {
     setSelectedCommand(null)
@@ -78,9 +111,13 @@ export default function CommandsPage() {
     }
   }
 
-  const filteredCommands = filterStatus 
-    ? commands.filter(c => c.status === filterStatus)
-    : commands
+  // Filtrage avec AND logique (tous les filtres se combinent)
+  const filteredCommands = commands.filter(c => {
+    const statusMatch = !filterStatus || c.status === filterStatus
+    const projectMatch = !filterProject || c.projects?.nom === filterProject
+    const creatorMatch = !filterCreator || c.users?.nom === filterCreator
+    return statusMatch && projectMatch && creatorMatch
+  })
 
   function getStatusColor(status) {
     const colors = {
@@ -108,6 +145,14 @@ export default function CommandsPage() {
     return items.reduce((total, item) => total + (item.prix_unitaire * item.quantite), 0)
   }
 
+  // Extraire les projets uniques
+  const uniqueProjects = [...new Set(commands.map(c => c.projects?.nom))].filter(Boolean).sort()
+
+  // Extraire les créateurs uniques (visible seulement pour Chef/Admin)
+  const uniqueCreators = (userProfile?.role === 'supervisor' || userProfile?.role === 'admin')
+    ? [...new Set(commands.map(c => c.users?.nom))].filter(Boolean).sort()
+    : []
+
   return (
     <div>
       <h2 style={styles.title}>Mes commandes</h2>
@@ -115,20 +160,70 @@ export default function CommandsPage() {
       {error && <div style={styles.error}>Erreur: {error}</div>}
 
       {/* Filtres */}
-      <div style={styles.filterBox}>
-        <label style={styles.label}>Filtrer par statut</label>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          style={styles.select}
-        >
-          <option value="">Tous les statuts</option>
-          <option value="draft">Brouillon</option>
-          <option value="pending">En attente</option>
-          <option value="validated">Validée</option>
-          <option value="rejected">Refusée</option>
-          <option value="archived">Archivée</option>
-        </select>
+      <div style={styles.filtersContainer}>
+        {/* Filtre Status */}
+        <div style={styles.filterBox}>
+          <label style={styles.label}>Filtrer par statut</label>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">Tous les statuts</option>
+            <option value="draft">Brouillon</option>
+            <option value="pending">En attente</option>
+            <option value="validated">Validée</option>
+            <option value="rejected">Refusée</option>
+            <option value="archived">Archivée</option>
+          </select>
+        </div>
+
+        {/* Filtre Projet */}
+        <div style={styles.filterBox}>
+          <label style={styles.label}>Filtrer par projet</label>
+          <select
+            value={filterProject}
+            onChange={(e) => setFilterProject(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">Tous les projets</option>
+            {uniqueProjects.map(projet => (
+              <option key={projet} value={projet}>{projet}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Filtre Créateur (visible seulement pour Chef/Admin) */}
+        {(userProfile?.role === 'supervisor' || userProfile?.role === 'admin') && (
+          <div style={styles.filterBox}>
+            <label style={styles.label}>Filtrer par créateur</label>
+            <select
+              value={filterCreator}
+              onChange={(e) => setFilterCreator(e.target.value)}
+              style={styles.select}
+            >
+              <option value="">Tous les créateurs</option>
+              {uniqueCreators.map(creator => (
+                <option key={creator} value={creator}>{creator}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Bouton Réinitialiser */}
+        <div style={styles.filterBox}>
+          <label style={{...styles.label, visibility: 'hidden'}}>.</label>
+          <button
+            onClick={() => {
+              setFilterStatus('')
+              setFilterProject('')
+              setFilterCreator('')
+            }}
+            style={styles.resetBtn}
+          >
+            ↻ Réinitialiser
+          </button>
+        </div>
       </div>
 
       {/* Liste des commandes */}
@@ -148,6 +243,9 @@ export default function CommandsPage() {
                   <p style={styles.cardDate}>
                     {new Date(command.created_at).toLocaleDateString('fr-CH')}
                   </p>
+                  {(userProfile?.role === 'supervisor' || userProfile?.role === 'admin') && (
+                    <p style={styles.cardCreator}>Créée par: {command.users?.nom || 'Inconnu'}</p>
+                  )}
                 </div>
                 <div style={{...styles.statusBadge, backgroundColor: getStatusColor(command.status)}}>
                   {getStatusLabel(command.status)}
@@ -199,11 +297,21 @@ export default function CommandsPage() {
               <p><strong>Date :</strong> {new Date(selectedCommand.created_at).toLocaleDateString('fr-CH')}</p>
               <p><strong>Projet :</strong> {selectedCommand.projects?.nom}</p>
               <p>
-                <strong>Statut :</strong> 
-                <span style={{...styles.statusBadge, backgroundColor: getStatusColor(selectedCommand.status), marginLeft: '10px'}}>
-                  {getStatusLabel(selectedCommand.status)}
-                </span>
+                <strong>Statut :</strong> {getStatusLabel(selectedCommand.status)}
               </p>
+
+              {/* Afficher créateur */}
+              <p><strong>Créée par :</strong> {selectedCommand.users?.nom || 'Inconnu'}</p>
+
+              {/* Afficher supervisor si validée ou refusée */}
+              {(selectedCommand.status === 'validated' || selectedCommand.status === 'rejected') && selectedCommand.supervisor_id && (
+                <p>
+                  <strong>{selectedCommand.status === 'validated' ? 'Validée par' : 'Refusée par'} :</strong> {selectedCommand.supervisor_nom || 'Inconnu'}
+                </p>
+              )}
+              
+              {/* Espacement */}
+              <div style={{ marginBottom: '20px' }} />
 
               {selectedCommand.remarques && (
                 <div style={styles.remarquesBox}>
@@ -280,25 +388,43 @@ const styles = {
     borderRadius: '6px',
     marginBottom: '20px'
   },
-  filterBox: {
-    backgroundColor: 'white',
-    padding: '15px',
-    borderRadius: '8px',
+  filtersContainer: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '12px',
     marginBottom: '20px',
-    maxWidth: '300px'
+    padding: '15px',
+    backgroundColor: '#E6F1FB',
+    borderRadius: '8px'
+  },
+  filterBox: {
+    display: 'flex',
+    flexDirection: 'column'
   },
   label: {
     display: 'block',
     marginBottom: '8px',
     fontWeight: '500',
-    fontSize: '14px'
+    fontSize: '12px',
+    color: '#042C53'
   },
   select: {
     width: '100%',
     padding: '8px',
-    border: '1px solid #ddd',
-    borderRadius: '6px',
-    fontSize: '14px'
+    border: '1px solid #185FA5',
+    borderRadius: '4px',
+    fontSize: '13px',
+    boxSizing: 'border-box'
+  },
+  resetBtn: {
+    padding: '8px 12px',
+    backgroundColor: '#888780',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: 'bold'
   },
   commandsList: {
     display: 'grid',
@@ -326,9 +452,15 @@ const styles = {
     fontSize: '16px'
   },
   cardDate: {
-    margin: 0,
+    margin: '0 0 5px 0',
     fontSize: '12px',
     color: '#888780'
+  },
+  cardCreator: {
+    margin: 0,
+    fontSize: '12px',
+    color: '#333',
+    fontStyle: 'italic'
   },
   statusBadge: {
     color: 'white',

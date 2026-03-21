@@ -1,0 +1,353 @@
+================================================================================
+CONTEXTE GLOBAL - ToolStock - SESSION 4 COMPLÉTÉE
+================================================================================
+
+PROJET: Application React + Supabase pour gestion de commandes de pièces mécaniques
+LOCATION: C:\Users\Lionel\toolstock\
+STATUT: ~95% de la v1 complétée
+DATE: Mars 20, 2026
+
+================================================================================
+1. STACK TECHNIQUE CONFIRMÉ
+================================================================================
+
+Frontend:
+- React 19 + Vite (Dev server + build)
+- React Router v7 (navigation)
+- Style inline uniquement (pas CSS externe)
+- Package.json dependencies:
+  - jsPDF: ^4.2.1 (PDF generation)
+  - html2canvas: ^1.4.1 (PDF rendering)
+  - xlsx: ^0.18.5 (Excel export)
+  - supabase: ^2.x
+
+Backend:
+- Supabase (BDD PostgreSQL + Auth)
+- Supabase Auth (email/password)
+- RLS (Row Level Security) sur tables sensibles
+
+Déploiement:
+- Vercel (frontend)
+- Domaine: toolplanification.com
+- Git: GitHub (main branch = production)
+- CI/CD: Auto-deploy Vercel on push to main
+
+================================================================================
+2. PALETTE COULEURS (DÉFINITIVE)
+================================================================================
+
+CSS Variables / Inline styles:
+- Blanc: #FFFFFF
+- Bleu clair: #E6F1FB (backgrounds, remarques)
+- Bleu principal: #185FA5 (boutons, liens, headers)
+- Bleu marine: #042C53 (titles, dark headers)
+- Gris texte: #888780 (secondary text, neutral buttons)
+- Vert succès: #27500A (validate button, success notifications)
+- Rouge danger: #A32D2D (reject/delete buttons)
+- Orange warning: #BA7517 (pending status badge)
+
+Animations:
+@keyframes slideIn {
+  from { transform: translateX(400px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+================================================================================
+3. ARCHITECTURE SUPABASE - 8 TABLES PRINCIPALES
+================================================================================
+
+TABLE: users
+├─ id (UUID PK)
+├─ email (VARCHAR 255 UNIQUE)
+├─ nom (VARCHAR 255)
+├─ role (VARCHAR 50: 'mechanic' | 'supervisor' | 'admin')
+├─ created_at (TIMESTAMP)
+└─ updated_at (TIMESTAMP)
+
+TABLE: projects
+├─ id (UUID PK)
+├─ nom (VARCHAR 255)
+├─ numero_projet (VARCHAR 100 UNIQUE)
+├─ description (TEXT)
+├─ created_at (TIMESTAMP)
+└─ updated_at (TIMESTAMP)
+
+TABLE: pieces
+├─ id (UUID PK)
+├─ numero_fournisseur (VARCHAR 255 UNIQUE)
+├─ numero_interne (VARCHAR 255 UNIQUE)
+├─ fournisseur (VARCHAR 255)
+├─ denomination (VARCHAR 255)
+├─ descriptif (TEXT)
+├─ prix_unitaire (DECIMAL 10,2)
+├─ created_at (TIMESTAMP)
+└─ updated_at (TIMESTAMP)
+
+TABLE: sub_assemblies
+├─ id (UUID PK)
+├─ nom (VARCHAR 255)
+├─ description (TEXT)
+├─ created_at (TIMESTAMP)
+└─ updated_at (TIMESTAMP)
+
+TABLE: sub_assembly_pieces
+├─ id (UUID PK)
+├─ sub_assembly_id (UUID FK → sub_assemblies)
+├─ piece_id (UUID FK → pieces)
+├─ quantite (INTEGER)
+├─ created_at (TIMESTAMP)
+└─ updated_at (TIMESTAMP)
+UNIQUE: (sub_assembly_id, piece_id)
+
+TABLE: project_pieces
+├─ id (UUID PK)
+├─ project_id (UUID FK → projects)
+├─ piece_id (UUID FK → pieces)
+├─ created_at (TIMESTAMP)
+UNIQUE: (project_id, piece_id)
+
+TABLE: project_sub_assembly
+├─ id (UUID PK)
+├─ project_id (UUID FK → projects)
+├─ sub_assembly_id (UUID FK → sub_assemblies)
+├─ created_at (TIMESTAMP)
+UNIQUE: (project_id, sub_assembly_id)
+
+TABLE: commands
+├─ id (UUID PK)
+├─ user_id (UUID FK → users)
+├─ project_id (UUID FK → projects)
+├─ status (VARCHAR 50: 'draft' | 'pending' | 'validated' | 'rejected' | 'archived')
+├─ supervisor_id (UUID FK → users)
+├─ supervisor_comments (TEXT)
+├─ remarques (TEXT) ← AJOUTÉ SESSION 4
+├─ created_at (TIMESTAMP)
+├─ validated_at (TIMESTAMP)
+└─ updated_at (TIMESTAMP)
+
+TABLE: command_items
+├─ id (UUID PK)
+├─ command_id (UUID FK → commands)
+├─ piece_id (UUID FK → pieces)
+├─ quantite (INTEGER)
+├─ prix_unitaire (DECIMAL 10,2) ← snapshot au moment commande
+├─ notes (TEXT)
+├─ created_at (TIMESTAMP)
+└─ updated_at (TIMESTAMP)
+
+================================================================================
+4. RÔLES & PERMISSIONS
+================================================================================
+
+ROLE: mechanic (Mécanicien)
+✅ Voir catalogue
+✅ Créer panier
+✅ Ajouter/modifier/supprimer items panier
+✅ Soumettre commande
+✅ Voir ses propres commandes (historique)
+✅ Exporter historique en Excel
+✅ Supprimer ses propres commandes (draft/pending seulement)
+❌ Valider commandes
+❌ Gérer catalogue
+
+ROLE: supervisor (Chef de service)
+✅ Tous les droits du mécanicien
+✅ Voir TOUTES les commandes (pas juste les siennes)
+✅ Valider/refuser commandes (pending → validated/rejected)
+✅ Modifier commandes avant validation
+✅ Ajouter commentaires lors validation
+✅ Voir remarques du créateur
+✅ Exporter PDF bon de commande
+❌ Gérer catalogue
+
+ROLE: admin (Administrateur)
+✅ Tous les droits
+✅ CRUD pièces (Create, Read, Update, Delete)
+✅ CRUD projets
+✅ CRUD sous-ensembles
+✅ CRUD users (modifier rôles)
+✅ Lier pièces ↔ projets
+✅ Lier pièces ↔ sous-ensembles
+✅ Lier projets ↔ sous-ensembles
+
+================================================================================
+5. STATUTS COMMANDES - WORKFLOW
+================================================================================
+
+DRAFT (Brouillon)
+  ↓ (Mécanicien/Chef clique "Soumettre")
+PENDING (En attente)
+  ├→ VALIDATED (Chef valide)
+  │    ├→ PDF généré automatiquement
+  │    ├→ Email envoyé (v1.5+)
+  │    └→ ARCHIVED (après 30 jours)
+  └→ REJECTED (Chef refuse)
+       └→ Retour DRAFT pour modification
+
+Suppression possible:
+- DRAFT: Oui (mécanicien)
+- PENDING: Oui (mécanicien/chef)
+- VALIDATED: Non
+- REJECTED: Non
+
+================================================================================
+6. FICHIERS CLÉS SESSION 4
+================================================================================
+
+MODIFIÉ: src/pages/CartPage.jsx
+├─ Ajout state: const [remarques, setRemarques] = useState('')
+├─ Ajout textarea remarques (avant les boutons)
+├─ Textarea sauvegardé dans commands.remarques au submit
+└─ Remarques vides après soumission (setRemarques(''))
+
+MODIFIÉ: src/pages/CommandsPage.jsx
+├─ Affichage remarques dans modale (après statut)
+├─ Style remarquesBox (bleu clair, border-left bleu)
+├─ Fonction handleDeleteCommand (avec confirmation)
+├─ Bouton supprimer visible uniquement pour draft/pending
+└─ Appel fetchCommands() après suppression
+
+MODIFIÉ: src/pages/ValidationPage.jsx
+├─ Affichage remarques du créateur
+├─ Section "📝 Remarques du créateur:" visible en bleu
+├─ Positionné après commandInfo, avant le tableau items
+└─ Style remarquesBox identique à CommandsPage
+
+MODIFIÉ: src/pages/CatalogPage.jsx
+├─ Ajout state: const [notification, setNotification] = useState(null)
+├─ Notification popup "✅ X× Dénomination ajouté au panier!"
+├─ Position fixed top-right, couleur verte #27500A
+├─ Animation slideIn 0.3s
+├─ Disparaît après 3 secondes (setTimeout)
+└─ Bouton import useCart dans PieceCard (BUG FIX)
+
+MODIFIÉ: src/components/Catalog/PieceCard.jsx
+├─ Import { useCart } from '../../hooks/useCart'
+├─ const { addToCart } = useCart()
+└─ Appel addToCart(piece, quantity) dans handleAddToCart
+
+================================================================================
+7. NOTIFICATION PANIER - CODE
+================================================================================
+
+{notification && (
+  <div style={{
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    backgroundColor: '#27500A',
+    color: 'white',
+    padding: '15px 20px',
+    borderRadius: '6px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+    zIndex: 2000,
+    fontSize: '14px',
+    fontWeight: 'bold',
+    animation: 'slideIn 0.3s ease-out'
+  }}>
+    {notification}
+  </div>
+)}
+
+<style>{`
+  @keyframes slideIn {
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+`}</style>
+
+================================================================================
+8. REMARQUE BOX - CODE
+================================================================================
+
+{selectedCommand.remarques && (
+  <div style={{
+    backgroundColor: '#E6F1FB',
+    padding: '15px',
+    borderRadius: '6px',
+    marginTop: '15px',
+    marginBottom: '15px',
+    borderLeft: '4px solid #185FA5'
+  }}>
+    <strong>📝 Remarques :</strong>
+    <p>{selectedCommand.remarques}</p>
+  </div>
+)}
+
+================================================================================
+9. PROCHAINES ÉTAPES - SESSION 5 TODO
+================================================================================
+
+TODO 1: Export PDF (Bon de commande)
+- Fichier: src/utils/pdfGenerator.js
+- Trigger: handleValidate() dans ValidationPage
+- Contenu: En-tête, N° commande, date, projet, créateur, chef, tableau items, total, remarques
+- Nom: BonCommande_CMD-XXXX_JJ-MM-AAAA.pdf
+- Libraries: jsPDF + html2canvas
+
+TODO 2: Export Excel (Historique)
+- Fichier: src/utils/excelGenerator.js
+- Trigger: Bouton "Exporter" dans CommandsPage
+- Colonnes: Date, Projet, N° interne, Dénomination, Qty, Prix U, Montant ligne, Fournisseur, Status, Remarques
+- Nom: Commandes_JJ-MM-AAAA.xlsx
+- Library: xlsx (SheetJS)
+
+TODO 3: Affichage Sous-ensembles
+- Component: src/components/Catalog/SubAssemblyView.jsx
+- Page: Intégrer dans CatalogPage
+- Affichage: Tableau composition (N° interne, Dénomination, Quantité, Prix U, Sous-total)
+- Action: Bouton "Commander ce sous-ensemble complet" → ajoute tous les items au panier
+
+TODO 4: Polish & Tests
+- Responsive design final (mobile 375px, tablet 1024px, desktop 1920px)
+- Tests sur vrais appareils
+- Edge cases (panier vide, projet non sélectionné, etc.)
+- Documentation code
+
+================================================================================
+10. COMMANDES GIT UTILES
+================================================================================
+
+# Voir status
+git status
+
+# Voir dernier commit
+git log --oneline -5
+
+# Ajouter tous les fichiers
+git add .
+
+# Commiter avec message
+git commit -m "feat: Description courte des changements"
+
+# Pousser vers main
+git push origin main
+
+# Voir branches
+git branch -a
+
+================================================================================
+11. CHECKKLIST AVANT SESSION 5
+================================================================================
+
+✅ Tous les fichiers sauvegardés
+✅ Dernier commit pushé vers main
+✅ .env.local absent du Git
+✅ Aucun error dans console (F12)
+✅ Panier fonctionne
+✅ Validation fonctionne
+✅ Admin panel accessible
+✅ Remarques affichées partout
+✅ Suppression commandes fonctionne
+✅ Notifications panier affichées
+
+================================================================================
+
+PRÊT POUR SESSION 5! 🚀
+
+Créé: Mars 20, 2026
+Dernier commit: "feat: Add remarques (notes) to commands..."
+Branch: main
+Status: ✅ Stable, prêt pour développement Session 5
+
+================================================================================
