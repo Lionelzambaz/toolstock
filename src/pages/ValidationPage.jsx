@@ -158,6 +158,11 @@ export default function ValidationPage() {
     return items.reduce((total, item) => total + (item.prix_unitaire * item.quantite), 0)
   }
 
+  function generatePDF(command, items) {
+    // TODO: Implémenter la génération PDF
+    alert('Fonction PDF à implémenter!')
+  }
+
   // Vérification du rôle
   if (userProfile?.role !== 'supervisor' && userProfile?.role !== 'admin') {
     return (
@@ -308,6 +313,18 @@ export default function ValidationPage() {
                   {submitting ? 'Traitement...' : '❌ Refuser'}
                 </button>
               </div>
+
+              {/* Bouton PDF - Visible seulement si validée */}
+              {selectedCommand.status === 'validated' && (
+                <div style={{marginTop: '20px'}}>
+                  <button
+                    onClick={() => generatePDF(selectedCommand, commandDetails)}
+                    style={styles.pdfBtn}
+                  >
+                    📄 Exporter en PDF
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -517,6 +534,17 @@ const styles = {
     flex: 1,
     padding: '12px',
     backgroundColor: '#A32D2D',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+    fontSize: '14px'
+  },
+  pdfBtn: {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: '#185FA5',
     color: 'white',
     border: 'none',
     borderRadius: '6px',

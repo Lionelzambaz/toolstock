@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../utils/supabaseClient'
+import { generatePDF } from '../utils/pdfGenerator'
+import { generateExcel } from '../utils/excelGenerator'
 
 export default function CommandsPage() {
   const { user, userProfile } = useAuth()
@@ -23,7 +25,6 @@ export default function CommandsPage() {
     try {
       setLoading(true)
       
-      // Construire la query selon le rôle
       let query = supabase
         .from('commands')
         .select(`
@@ -32,13 +33,10 @@ export default function CommandsPage() {
           users!user_id(nom),
           command_items(id)
         `)
-                      
-      // Mécanicien: Voit SES commandes
-      // Chef/Admin: Voient TOUTES les commandes
+      
       if (userProfile?.role === 'mechanic') {
         query = query.eq('user_id', user.id)
       }
-      // Chef et Admin voient tout, pas besoin de filtre
       
       query = query.order('created_at', { ascending: false })
       
@@ -70,28 +68,28 @@ export default function CommandsPage() {
     }
   }
 
-    async function handleViewCommand(command) {
-      setSelectedCommand(command)
-      fetchCommandDetails(command.id)
+async function handleViewCommand(command) {
+  setSelectedCommand(command)
+  fetchCommandDetails(command.id)
+  
+  // Récupérer le nom du supervisor si existe
+  if (command.supervisor_id) {
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('nom')
+        .eq('id', command.supervisor_id)
+        .single()
       
-      // Récupérer le nom du supervisor si existe
-      if (command.supervisor_id) {
-        try {
-          const { data } = await supabase
-            .from('users')
-            .select('nom')
-            .eq('id', command.supervisor_id)
-            .single()
-          
-          if (data) {
-            command.supervisor_nom = data.nom
-            setSelectedCommand({...command})
-          }
-        } catch (err) {
-          console.error('Erreur supervisor:', err)
-        }
+      if (data) {
+        command.supervisor_nom = data.nom
+        setSelectedCommand({...command})
       }
+    } catch (err) {
+      console.error('Erreur supervisor:', err)
     }
+  }
+}
 
   function closeDetails() {
     setSelectedCommand(null)
@@ -111,7 +109,6 @@ export default function CommandsPage() {
     }
   }
 
-  // Filtrage avec AND logique (tous les filtres se combinent)
   const filteredCommands = commands.filter(c => {
     const statusMatch = !filterStatus || c.status === filterStatus
     const projectMatch = !filterProject || c.projects?.nom === filterProject
@@ -145,23 +142,53 @@ export default function CommandsPage() {
     return items.reduce((total, item) => total + (item.prix_unitaire * item.quantite), 0)
   }
 
-  // Extraire les projets uniques
   const uniqueProjects = [...new Set(commands.map(c => c.projects?.nom))].filter(Boolean).sort()
 
-  // Extraire les créateurs uniques (visible seulement pour Chef/Admin)
   const uniqueCreators = (userProfile?.role === 'supervisor' || userProfile?.role === 'admin')
     ? [...new Set(commands.map(c => c.users?.nom))].filter(Boolean).sort()
     : []
 
+  async function handleExportExcel() {
+    try {
+      const commandsDetailsMap = {}
+      
+      for (const cmd of filteredCommands) {
+        const { data, error } = await supabase
+          .from('command_items')
+          .select(`
+            *,
+            pieces(numero_interne, denomination, fournisseur, numero_fournisseur)
+          `)
+          .eq('command_id', cmd.id)
+        
+        if (error) throw error
+        commandsDetailsMap[cmd.id] = data || []
+      }
+      
+      generateExcel(filteredCommands, commandsDetailsMap, userProfile)
+    } catch (err) {
+      console.error('Erreur récupération détails:', err)
+      alert('Erreur lors de la récupération des données: ' + err.message)
+    }
+  }
+
   return (
     <div>
-      <h2 style={styles.title}>Mes commandes</h2>
+<div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+  <h2 style={styles.title}>Mes commandes</h2>
+  {(userProfile?.role === 'supervisor' || userProfile?.role === 'admin') && (
+    <button
+      onClick={handleExportExcel}
+      style={styles.excelBtn}
+    >
+      📊 Exporter en Excel
+    </button>
+  )}
+</div>
 
       {error && <div style={styles.error}>Erreur: {error}</div>}
 
-      {/* Filtres */}
       <div style={styles.filtersContainer}>
-        {/* Filtre Status */}
         <div style={styles.filterBox}>
           <label style={styles.label}>Filtrer par statut</label>
           <select
@@ -178,7 +205,6 @@ export default function CommandsPage() {
           </select>
         </div>
 
-        {/* Filtre Projet */}
         <div style={styles.filterBox}>
           <label style={styles.label}>Filtrer par projet</label>
           <select
@@ -193,7 +219,6 @@ export default function CommandsPage() {
           </select>
         </div>
 
-        {/* Filtre Créateur (visible seulement pour Chef/Admin) */}
         {(userProfile?.role === 'supervisor' || userProfile?.role === 'admin') && (
           <div style={styles.filterBox}>
             <label style={styles.label}>Filtrer par créateur</label>
@@ -210,7 +235,6 @@ export default function CommandsPage() {
           </div>
         )}
 
-        {/* Bouton Réinitialiser */}
         <div style={styles.filterBox}>
           <label style={{...styles.label, visibility: 'hidden'}}>.</label>
           <button
@@ -226,7 +250,6 @@ export default function CommandsPage() {
         </div>
       </div>
 
-      {/* Liste des commandes */}
       {loading ? (
         <p>Chargement...</p>
       ) : filteredCommands.length === 0 ? (
@@ -283,7 +306,6 @@ export default function CommandsPage() {
         </div>
       )}
 
-      {/* Modal détails */}
       {selectedCommand && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
@@ -300,18 +322,21 @@ export default function CommandsPage() {
                 <strong>Statut :</strong> {getStatusLabel(selectedCommand.status)}
               </p>
 
-              {/* Afficher créateur */}
+              {/* Espacement */}
+              <div style={{ marginBottom: '20px' }} />
+
               <p><strong>Créée par :</strong> {selectedCommand.users?.nom || 'Inconnu'}</p>
 
-              {/* Afficher supervisor si validée ou refusée */}
               {(selectedCommand.status === 'validated' || selectedCommand.status === 'rejected') && selectedCommand.supervisor_id && (
                 <p>
                   <strong>{selectedCommand.status === 'validated' ? 'Validée par' : 'Refusée par'} :</strong> {selectedCommand.supervisor_nom || 'Inconnu'}
                 </p>
               )}
-              
-              {/* Espacement */}
-              <div style={{ marginBottom: '20px' }} />
+
+              {/* Espacement après Validée/Refusée par */}
+              {(selectedCommand.status === 'validated' || selectedCommand.status === 'rejected') && selectedCommand.supervisor_id && (
+                <div style={{ marginBottom: '20px' }} />
+              )}
 
               {selectedCommand.remarques && (
                 <div style={styles.remarquesBox}>
@@ -367,6 +392,14 @@ export default function CommandsPage() {
             </div>
 
             <div style={styles.modalFooter}>
+              {selectedCommand.status === 'validated' && (
+                <button
+                  onClick={() => generatePDF(selectedCommand, commandDetails, userProfile)}
+                  style={styles.pdfBtn}
+                >
+                  📄 Exporter PDF
+                </button>
+              )}
               <button onClick={closeDetails} style={styles.closeModalBtn}>Fermer</button>
             </div>
           </div>
@@ -387,6 +420,16 @@ const styles = {
     color: '#A32D2D',
     borderRadius: '6px',
     marginBottom: '20px'
+  },
+  excelBtn: {
+    padding: '10px 20px',
+    backgroundColor: '#27500A',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    fontSize: '14px'
   },
   filtersContainer: {
     display: 'grid',
@@ -589,6 +632,15 @@ const styles = {
     display: 'flex',
     justifyContent: 'flex-end',
     gap: '10px'
+  },
+  pdfBtn: {
+    padding: '10px 20px',
+    backgroundColor: '#185FA5',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500'
   },
   closeModalBtn: {
     padding: '10px 20px',
