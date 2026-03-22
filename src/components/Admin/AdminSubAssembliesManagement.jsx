@@ -36,13 +36,13 @@ export default function AdminSubAssembliesManagement() {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleAddPiece = () => {
-    if (newPieceId && newPieceQty > 0) {
-      setSelectedPieces([...selectedPieces, { piece_id: newPieceId, quantite: parseInt(newPieceQty) }])
-      setNewPieceId('')
-      setNewPieceQty(1)
-    }
-  }
+    const handleAddPiece = () => {
+        if (newPieceId && newPieceQty >= 0) {
+          setSelectedPieces([...selectedPieces, { piece_id: newPieceId, quantite: parseInt(newPieceQty) }])
+          setNewPieceId('')
+          setNewPieceQty(1)
+        }
+      }
 
   const handleRemovePiece = (idx) => {
     setSelectedPieces(selectedPieces.filter((_, i) => i !== idx))
@@ -145,8 +145,11 @@ export default function AdminSubAssembliesManagement() {
           <textarea name="description" placeholder="Description" value={formData.description} onChange={handleInputChange} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px', gridColumn: '1 / -1' }} />
         </div>
 
-        {/* Ajouter des pièces */}
+{/* Ajouter des pièces */}
         <h4 style={{ color: '#042C53', marginTop: '15px' }}>Pièces du sous-ensemble</h4>
+        <p style={{ fontSize: '13px', color: '#888780', marginTop: '0', marginBottom: '10px' }}>
+          💡 <strong>Quantité 0 = Pièce optionnelle:</strong> Elle n'est pas ajoutée au panier quand on commande ce sous-ensemble, mais reste visible dans le catalogue.
+        </p>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '10px', marginBottom: '10px', alignItems: 'end' }}>
           <select value={newPieceId} onChange={(e) => setNewPieceId(e.target.value)} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }}>
             <option value="">Sélectionner une pièce</option>
@@ -154,7 +157,7 @@ export default function AdminSubAssembliesManagement() {
               <option key={p.id} value={p.id}>{p.denomination} ({p.numero_interne})</option>
             ))}
           </select>
-          <input type="number" value={newPieceQty} onChange={(e) => setNewPieceQty(e.target.value)} min="1" style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
+          <input type="number" value={newPieceQty} onChange={(e) => setNewPieceQty(e.target.value)} min="0" style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
           <button type="button" onClick={handleAddPiece} style={{ padding: '8px 15px', backgroundColor: '#27500A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>➕ Ajouter</button>
         </div>
 

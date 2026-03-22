@@ -39,10 +39,38 @@ export function useCatalog() {
     }
   }, [])
 
+  const getSubAssemblyComposition = useCallback(async (subAssemblyId) => {
+    try {
+      setLoading(true)
+      const { data, error: err } = await supabase
+        .from('sub_assembly_pieces')
+        .select(`
+          quantite,
+          pieces(
+            id,
+            numero_interne,
+            denomination,
+            prix_unitaire,
+            fournisseur,
+            numero_fournisseur
+          )
+        `)
+        .eq('sub_assembly_id', subAssemblyId)
+      if (err) throw err
+      return data || []
+    } catch (err) {
+      setError(err.message)
+      return []
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   return {
     loading,
     error,
     getProjectsForPiece,
-    getSubAssembliesForPiece
+    getSubAssembliesForPiece,
+    getSubAssemblyComposition
   }
 }

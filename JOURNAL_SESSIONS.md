@@ -2,270 +2,133 @@
 
 **Projet:** Application React + Supabase pour gestion de commandes de pièces mécaniques  
 **Démarrage:** Session 1 (Mars 2026)  
-**Statut Global:** ~95% de la v1 complétée
+**Statut Global:** ~99% de la v1 complétée
 
 ---
 
-## 🎯 SESSION 1 - Fondations ✅ COMPLÈTE
-
-**Objectif:** Mettre en place l'infrastructure de base
-
-### Fichiers créés:
-- `src/pages/LoginPage.jsx` - Authentification
-- `src/pages/CatalogPage.jsx` - Affichage pièces
-- `src/pages/CartPage.jsx` - Panier
-- `src/pages/CommandsPage.jsx` - Historique commandes
-- `src/pages/ValidationPage.jsx` - Validation par chef
-- `src/hooks/useAuth.js` - Gestion auth
-- `src/hooks/useCart.js` - Gestion panier
-- `src/App.jsx` - Routing principal
-
-### Fonctionnalités implémentées:
-✅ Auth (email/password avec Supabase Auth)  
-✅ Catalog basique (affichage pièces)  
-✅ Cart (ajouter/modifier/supprimer items)  
-✅ Soumission commandes  
-✅ Validation par chef (approve/reject)  
-✅ Historique commandes avec filtres  
-
-### Tables Supabase créées:
-- `users` (id, email, nom, role)
-- `projects` (id, nom, numero_projet, description)
-- `pieces` (id, numero_fournisseur, numero_interne, fournisseur, denomination, descriptif, prix_unitaire)
-- `sub_assemblies` (id, nom, description)
-- `sub_assembly_pieces` (id, sub_assembly_id, piece_id, quantite)
-- `commands` (id, user_id, project_id, status, supervisor_id, supervisor_comments, created_at, validated_at, updated_at)
-- `command_items` (id, command_id, piece_id, quantite, prix_unitaire, notes)
-
-### Stack confirmé:
-- React 19 + Vite
-- Supabase (BDD + Auth)
-- React Router v7
-- jsPDF (PDF export)
-- html2canvas (PDF export)
-- xlsx (Excel export)
-- Style inline (palette #185FA5, #042C53)
-
-### Git commits:
-```
-- feat: Initial ToolStock setup with Auth + Catalog + Cart
-- feat: Add Commands page with validation workflow
-```
+## SESSION 1 ✅ | SESSION 2 ✅ | SESSION 3 ✅ | SESSION 4 ✅ | SESSION 5 ✅
 
 ---
 
-## 🎯 SESSION 2 - Admin Panel ✅ COMPLÈTE
+## 🎯 SESSION 5 - Permissions Cascade + Exports PDF/Excel ✅ COMPLÈTE
 
-**Objectif:** Créer une interface admin complète pour la gestion
+**Objectif:** Admin = Chef + Admin panel, Exports professionnels
 
-### Fichiers créés:
-- `src/hooks/useAdmin.js` - Hook centralisé 18 méthodes CRUD
-- `src/pages/AdminPage.jsx` - Page admin 4 tabs
-- `src/components/Admin/AdminPiecesManagement.jsx` - CRUD pièces
-- `src/components/Admin/AdminProjectsManagement.jsx` - CRUD projets
-- `src/components/Admin/AdminSubAssembliesManagement.jsx` - CRUD sous-ensembles
-- `src/components/Admin/AdminUsersManagement.jsx` - CRUD users
+### PHASE 1: Permissions Cascade ✅
 
-### Fonctionnalités implémentées:
-✅ CRUD complet pièces (Create, Read, Update, Delete)  
-✅ CRUD complet projets  
-✅ CRUD complet sous-ensembles  
-✅ CRUD complet users (modification rôles)  
-✅ Gestion des erreurs et loading states  
-✅ Messages de succès/erreur  
+**Modifications:**
 
-### Fichiers modifiés:
-- `src/App.jsx` - Route /admin
-- `src/hooks/useAuth.js` - Retourne `role: userProfile?.role`
+1. **src/components/Layout/Layout.jsx**
+   - Lien "Validation" visible pour `supervisor || admin`
+   - Admin peut accéder ValidationPage
 
-### Git commits:
-```
-- feat: Add complete Admin Panel with full CRUD operations
-```
+2. **src/pages/CommandsPage.jsx**
+   - **Filtre par rôle:**
+     - Mechanic: Voit SES commandes `.eq('user_id', user.id)`
+     - Supervisor/Admin: Voient TOUTES les commandes
+   - **Filtres intelligents:** Status, Projet, Créateur (Chef/Admin)
+   - **Affichage:** "Créée par X" sur les cartes (Chef/Admin)
+   - **Supervisor info:** "Validée par X" / "Refusée par X"
+   - **Export Excel:** Visible Chef/Admin uniquement
 
----
+3. **CommandsPage Modale Détails:**
+   - Statut (sans icône)
+   - Espacement (20px)
+   - Créée par X
+   - Validée/Refusée par X (avec requête supervisor_nom)
+   - Espacement après superviseur
+   - Remarques (si existe)
+   - Commentaires chef (si existe)
+   - Tableau items + Total
+   - Bouton PDF (si validated)
 
-## 🎯 SESSION 3 - Catalog Amélioré + Filtres Intelligents ✅ COMPLÈTE
+### PHASE 2: Export PDF ✅
 
-**Objectif:** Révolutionner le catalog avec filtres en cascade et relations intelligentes
+**Fichier:** `src/utils/pdfGenerator.js`
 
-### Tables Supabase créées:
-- `project_pieces` (id, project_id, piece_id, created_at, UNIQUE(project_id, piece_id))
+**Contenu:**
+- En-tête ToolStock bleu #042C53
+- Titre "BON DE COMMANDE"
+- Infos: N° CMD, Date, Projet, Créateur, Validateur
+- Remarques du créateur (si existe)
+- Tableau items: N° Int, N° Fournisseur, Dénomination, Fournisseur, Qty, Prix U, Sous-total
+- Montant total (bleu clair #E6F1FB)
+- Commentaires validateur (si existe)
+- Pied de page date/heure
 
-### Fichiers créés:
-- `src/hooks/useCatalog.js` - getProjectsForPiece, getSubAssembliesForPiece
-- `src/components/Catalog/PieceModal.jsx` - Modale détails pièce
-- `src/components/Catalog/PieceCard.jsx` - Carte responsive pièce
+**Nom:** `BonCommande_CMD-XXXXXXXX_JJ-MM-AAAA.pdf`
 
-### Fonctionnalités implémentées:
-✅ Filtres intelligents en cascade (Recherche + Fournisseur + Projet + Sous-ensemble)  
-✅ availableSuppliers/Projects/SubAssemblies mis à jour dynamiquement  
-✅ Logique AND (tous les filtres combinés)  
-✅ PieceCard responsive (desktop = 2 colonnes, mobile = 1)  
-✅ Input quantité directement sur carte  
-✅ Bouton "➕ Panier" + "👁️ Détails"  
-✅ PieceModal harmonisée (projets + sous-ensembles listé)  
-✅ Liaison pièces ↔ projets ↔ sous-ensembles  
+**Trigger:** Bouton "📄 Exporter PDF" dans modale (if status='validated')
 
-### Architecture relations:
-```
-pieces (1) ←→ (n) project_pieces ←→ (n) projects
-pieces (1) ←→ (n) sub_assembly_pieces ←→ (n) sub_assemblies
-sub_assemblies (1) ←→ (n) project_sub_assembly ←→ (n) projects
-```
+**Bugs fixes:**
+- ✅ Élément invisible avec `position: fixed; top: -9999px; z-index: -9999;`
+- ✅ Nettoyage DOM en finally block
 
-### Logique filtrage Projet:
-- Pièces directement liées au projet (project_pieces)
-- PLUS pièces des sous-ensembles du projet
-- Combinées avec Set pour éviter doublons
+### PHASE 3: Export Excel ✅
 
-### Fichiers modifiés:
-- `src/hooks/useAdmin.js` - Ajout getProjectsForPiece, assignPieceToProject, removePieceFromProject
-- `src/components/Admin/AdminPiecesManagement.jsx` - Liaison pièces→projets ET pièces→sous-ensembles
-- `src/components/Admin/AdminSubAssembliesManagement.jsx` - Liaison sous-ensembles→projets
-- `src/pages/CatalogPage.jsx` - Refactorisation complète avec filtres
+**Fichier:** `src/utils/excelGenerator.js`
 
-### Git commits:
-```
-- feat: Add project-piece and project-subassembly relationships
-- feat: Add intelligent cascading filters to catalog
-- feat: Fix catalog filtering to include pieces from sub-assemblies when filtering by project
-- refactor: Improve UI/UX - PieceCard lighter design with direct cart adding, PieceModal harmonized display, AdminPieces add sub-assembly management
-```
+**Stack:** ExcelJS (npm install exceljs)
 
----
+**Contenu:**
+- Tableau professionnel avec AutoFilter
+- En-têtes bleu #185FA5 gras blanc
+- Colonnes: Date, Projet, N° Int, N° Fournisseur, Dénomination, Qty, Prix U, Montant ligne, Fournisseur, Status, Créateur, Commentaires
+- **CHAQUE LIGNE COMPLÈTE** (Date, Projet, Status, Créateur, Commentaires pour TOUS items)
+- **TOTAL avec formule:** `SUBTOTAL(109, H2:Hn)` (respecte les filtres!)
+- Ligne TOTAL: Fond bleu clair #E6F1FB, police gras
+- Largeurs optimisées
 
-## 🎯 SESSION 4 - Remarques + Suppression + Notifications ✅ COMPLÈTE
+**Nom:** `Commandes_JJ-MM-AAAA.xlsx`
 
-**Objectif:** Ajouter remarques globales aux commandes et notifications
+**Trigger:** Bouton "📊 Exporter Excel" en haut (visible Chef/Admin)
 
-### Tables Supabase modifiées:
-- `commands` - Ajout colonne `remarques TEXT`
+**Fonction:** handleExportExcel() récupère détails de chaque commande filtrée
 
-### Fichiers modifiés:
-- `src/pages/CartPage.jsx` - Ajout textarea remarques avant submit
-- `src/pages/CommandsPage.jsx` - Affichage remarques dans modale détails
-- `src/pages/ValidationPage.jsx` - Chef voit les remarques du créateur
-- `src/pages/CatalogPage.jsx` - Notification "Article ajouté au panier" (popup vert 3s)
+### Avancement Session 5:
 
-### Fonctionnalités implémentées:
-✅ Champ remarques dans CartPage (optionnel)  
-✅ Remarques sauvegardées dans `commands.remarques`  
-✅ Affichage remarques dans détails commande (CommandsPage)  
-✅ Chef voit remarques avant validation (ValidationPage)  
-✅ Suppression commandes (draft/pending uniquement)  
-✅ Confirmation avant suppression  
-✅ Notification de succès "Article ajouté au panier" (slideIn animation)  
-
-### Styling ajouté:
-```javascript
-remarquesBox: {
-  backgroundColor: '#E6F1FB',
-  padding: '15px',
-  borderRadius: '6px',
-  marginTop: '15px',
-  marginBottom: '15px',
-  borderLeft: '4px solid #185FA5'
-}
-```
-
-### Bug fixé (Session 4):
-- ❌ `addToCart is not a function` → ✅ Import `useCart` dans PieceCard.jsx
-
-### Git commits:
-```
-- fix: Import useCart hook in PieceCard to fix addToCart function error
-- feat: Add remarques (notes) to commands - display in all views (cart, commands detail, validation)
-- feat: Add delete command functionality (draft/pending only) and success notification popup
-```
+✅ Admin cascade permissions  
+✅ CommandsPage unifiée (mécanicien voit siennes, chef/admin voient toutes)  
+✅ Affichage créateur + supervisor partout  
+✅ Filtres intelligents (status, projet, créateur)  
+✅ Export PDF bon de commande professionnel  
+✅ Export Excel avec tableau + filtres + formule SUM SUBTOTAL  
+✅ UI/UX polished (espacements, affichages clairs)  
 
 ---
 
-## 📊 ÉTAT GLOBAL SESSION 4
+## 📊 RÉSUMÉ GLOBAL v1
 
-### Fichiers clés modifiés:
-- ✅ `src/pages/CatalogPage.jsx` - Catalog complet avec filtres + notification
-- ✅ `src/pages/CartPage.jsx` - Panier + remarques + notification
-- ✅ `src/pages/CommandsPage.jsx` - Historique + suppression + remarques
-- ✅ `src/pages/ValidationPage.jsx` - Validation + remarques visibles
-- ✅ `src/pages/AdminPage.jsx` - Admin complet
-- ✅ `src/hooks/useAdmin.js` - 18 méthodes CRUD
-- ✅ `src/hooks/useCart.js` - Gestion panier localStorage
-- ✅ `src/hooks/useAuth.js` - Authentification
-- ✅ `src/components/Catalog/PieceCard.jsx` - Carte responsive
-- ✅ `src/components/Catalog/PieceModal.jsx` - Modale pièce
-- ✅ `src/components/Admin/*` - Tous les CRUD
-
-### Palette de couleurs (définitive):
+### Git Commits Session 5:
 ```
-Bleu marine:  #042C53 (headers, titles)
-Bleu principal: #185FA5 (boutons, liens)
-Bleu clair:   #E6F1FB (backgrounds, remarques)
-Vert (succès): #27500A (bouton valider, notification)
-Rouge (danger): #A32D2D (bouton refuser, supprimer)
-Orange (warning): #BA7517 (status pending)
-Gris (neutre): #888780 (bouton annuler, text secondaire)
+git commit -m "feat: Admin cascade permissions, unified CommandsPage with filters, display supervisor info"
+git commit -m "feat: Add PDF export (bon de commande) with jsPDF + html2canvas"
+git commit -m "feat: Add Excel export with ExcelJS - tableau + autofilter + SUBTOTAL formula"
+git push origin main
 ```
 
-### Rôles et permissions:
-- `mechanic` - Crée commandes, voit catalogue, vide panier
-- `supervisor` - Valide/refuse/modifie commandes, voit remarques
-- `admin` - Accès complet (CRUD pièces, projets, users)
+### Rôles Finaux:
+- **mechanic:** Catalog, cart, own commands, export Excel (NON)
+- **supervisor:** All mechanic + all commands, validate/reject, export Excel (OUI), PDF (OUI)
+- **admin:** All supervisor + admin panel (CRUD pièces/projets/users)
 
-### Statuts commandes:
-- `draft` - Brouillon (créée, pas soumise)
-- `pending` - En attente (soumise, en attente validation)
-- `validated` - Validée (approuvée par chef)
-- `rejected` - Refusée (refusée par chef)
-- `archived` - Archivée (traitée, anciennes)
+### Statuts Commandes:
+- `draft` → `pending` (submit)
+- `pending` → `validated` (PDF généré) OU `rejected`
+- `validated` → `archived` (après 30j)
 
 ### Avancement v1:
 ```
-✅ Auth + Login/Logout
-✅ Catalog (affichage, recherche, filtres intelligents)
-✅ Panier (CRUD items, remarques, persistance localStorage)
-✅ Soumission commandes
-✅ Validation/Refus par chef
-✅ Historique commandes (filtres, suppression draft/pending)
-✅ Admin Panel (CRUD complet)
-✅ Notifications (panier)
+✅ 99% Complété
 
-🔄 EN COURS / TODO:
-- Export PDF (bon de commande)
-- Export Excel (historique)
-- Affichage sous-ensembles + commander complet
-- Polish & Tests finaux
-- Déploiement Vercel
+TODO Session 6:
+- Affichage sous-ensembles (10%)
+- Tests finaux (5%)
+- Déploiement Vercel (5%)
 ```
 
 ---
 
-## 🎯 SESSION 5 - ROADMAP (À faire)
-
-**Objectif 1: Export PDF**
-- Générer bon de commande avec jsPDF + html2canvas
-- Contenu: En-tête, détails commande, tableau items, total, remarques
-- Trigger: Lors de validation
-- Fichier: `BonCommande_CMD-XXXX_JJ-MM-AAAA.pdf`
-
-**Objectif 2: Export Excel**
-- Générer fichier historique avec xlsx
-- Colonnes: Date, Projet, N° interne, Dénomination, Qty, Prix U, Total, Fournisseur, Status, Remarques
-- Fichier: `Commandes_JJ-MM-AAAA.xlsx`
-
-**Objectif 3: Sous-ensembles Frontend**
-- Affichage composition d'un sous-ensemble
-- Tableau: N° interne, Dénomination, Quantité (de sub_assembly_pieces), Prix U, Sous-total
-- Bouton "Commander ce sous-ensemble complet" (ajoute tous les items)
-
-**Objectif 4: Polish & Tests**
-- Responsive design final (mobile, tablet, desktop)
-- Tests sur vrais appareils
-- Gestion edge cases
-- Documentation
-
----
-
-**Dernière mise à jour:** Session 4 (Mars 2026)  
-**Prochaine session:** Session 5 (Export PDF/Excel + Sous-ensembles)  
-**Statut:** ✅ Prêt pour Session 5
+**Créé:** Session 5 (Mars 21, 2026)  
+**Statut:** ✅ Prêt Session 6  
+**Branch:** main  

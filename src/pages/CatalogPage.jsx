@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../utils/supabaseClient'
 import { useCart } from '../hooks/useCart'
+import { useCatalog } from '../hooks/useCatalog'
 import PieceCard from '../components/Catalog/PieceCard'
 import PieceModal from '../components/Catalog/PieceModal'
 
 export default function CatalogPage() {
   const { addItem } = useCart()
+  const { getSubAssemblyComposition } = useCatalog()
   const [pieces, setPieces] = useState([])
   const [projects, setProjects] = useState([])
   const [subAssemblies, setSubAssemblies] = useState([])
@@ -265,6 +267,46 @@ export default function CatalogPage() {
     setTimeout(() => setNotification(null), 3000)
   }
 
+  const handleCommandSubAssembly = async () => {
+    if (!selectedSubAssembly || selectedSubAssembly === 'all') return
+
+    // Demander combien de fois
+    const count = prompt('Combien de fois ce sous-ensemble?', '1')
+    if (!count || parseInt(count) < 1) return
+
+    try {
+      // Récupérer la composition du sous-ensemble
+      const composition = await getSubAssemblyComposition(selectedSubAssembly)
+      
+      if (composition.length === 0) {
+        setNotification('❌ Ce sous-ensemble est vide')
+        setTimeout(() => setNotification(null), 3000)
+        return
+      }
+
+      // Ajouter chaque pièce au panier (ignorer qty=0)
+      let itemsAdded = 0
+      composition.forEach(item => {
+        if (item.quantite > 0) {
+          addItem(item.pieces, item.quantite * parseInt(count))
+          itemsAdded++
+        }
+      })
+
+      // Notification
+      const totalQty = composition
+        .filter(c => c.quantite > 0)
+        .reduce((sum, c) => sum + (c.quantite * parseInt(count)), 0)
+      
+      setNotification(`✅ ${totalQty} items ajoutés au panier!`)
+      setTimeout(() => setNotification(null), 3000)
+    } catch (err) {
+      console.error('Erreur:', err)
+      setNotification('❌ Erreur lors de l\'ajout')
+      setTimeout(() => setNotification(null), 3000)
+    }
+  }
+
   if (loading) return <div style={{ padding: '20px' }}>Chargement du catalogue...</div>
   if (error) return <div style={{ padding: '20px', color: '#A32D2D' }}>Erreur: {error}</div>
 
@@ -427,6 +469,28 @@ export default function CatalogPage() {
             </button>
           </div>
         </div>
+
+        {/* BOUTON COMMANDER SOUS-ENSEMBLE */}
+        {selectedSubAssembly !== 'all' && (
+          <div style={{ marginBottom: '25px' }}>
+            <button
+              onClick={handleCommandSubAssembly}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#27500A',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ➕ Commander ce sous-ensemble complet
+            </button>
+          </div>
+        )}
 
         {/* GRILLE DE CARTES - VERTICALES, EMPILÉES */}
         <div style={{
