@@ -1,5 +1,6 @@
 import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
+import AdminMenuVertical from './AdminMenuVertical'
 
 export function Layout({ children }) {
   const { userProfile, logout } = useAuth()
@@ -12,6 +13,9 @@ export function Layout({ children }) {
 
   return (
     <div style={styles.container}>
+      {/* Menu vertical principal */}
+      <AdminMenuVertical />
+
       {/* Header */}
       <header style={styles.header}>
         <div style={styles.headerContent}>
@@ -33,55 +37,11 @@ export function Layout({ children }) {
         </div>
       </header>
 
-      <div style={styles.main}>
-        {/* Sidebar */}
-        <aside style={styles.sidebar}>
-          <nav style={styles.nav}>
-            <NavLink href="/catalog" icon="📚">
-              Catalogue
-            </NavLink>
-            <NavLink href="/cart" icon="🛒">
-              Panier
-            </NavLink>
-            <NavLink href="/commands" icon="📋">
-              Mes commandes
-            </NavLink>
-            {(userProfile?.role === 'supervisor' || userProfile?.role === 'admin') && (
-              <NavLink href="/validation" icon="✅">
-                Validation
-              </NavLink>
-            )}
-            {userProfile?.role === 'admin' && (
-              <NavLink href="/admin" icon="⚙️">
-                Administration
-              </NavLink>
-            )}
-          </nav>
-        </aside>
-
-        {/* Content */}
-        <main style={styles.content}>
-          {children}
-        </main>
-      </div>
+      {/* Main content */}
+      <main style={styles.content}>
+        {children}
+      </main>
     </div>
-  )
-}
-
-function NavLink({ href, icon, children }) {
-  const isActive = window.location.pathname === href
-  
-  return (
-    <a 
-      href={href}
-      style={{
-        ...styles.navLink,
-        ...(isActive ? styles.navLinkActive : {})
-      }}
-    >
-      <span style={styles.icon}>{icon}</span>
-      {children}
-    </a>
   )
 }
 
@@ -96,7 +56,8 @@ const styles = {
     backgroundColor: '#042C53',
     color: 'white',
     padding: '0 20px',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    marginLeft: '62px'
   },
   headerContent: {
     maxWidth: '1400px',
@@ -132,47 +93,11 @@ const styles = {
     cursor: 'pointer',
     fontSize: '12px'
   },
-  main: {
-    display: 'flex',
-    flex: 1,
-    maxWidth: '1400px',
-    margin: '0 auto',
-    width: '100%'
-  },
-  sidebar: {
-    width: '250px',
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRight: '1px solid #ddd'
-  },
-  nav: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px'
-  },
-  navLink: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '12px 16px',
-    color: '#333',
-    textDecoration: 'none',
-    borderRadius: '6px',
-    fontSize: '14px',
-    cursor: 'pointer',
-    transition: 'all 0.2s'
-  },
-  navLinkActive: {
-    backgroundColor: '#E6F1FB',
-    color: '#185FA5',
-    fontWeight: '500'
-  },
-  icon: {
-    fontSize: '18px'
-  },
   content: {
     flex: 1,
     padding: '30px',
-    backgroundColor: '#f5f5f5'
+    backgroundColor: '#f5f5f5',
+    marginLeft: '62px',
+    marginBottom: '56px'
   }
 }

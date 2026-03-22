@@ -1,5 +1,6 @@
 import React from 'react'
 import { useCart } from '../../hooks/useCart'
+import { ShoppingCart, Eye } from 'lucide-react'
 
 export default function PieceCard({ piece, onViewDetails, onAddToCart }) {
   const { addToCart } = useCart()
@@ -144,10 +145,15 @@ const handleAddToCart = () => {
                 cursor: 'pointer',
                 fontWeight: 'bold',
                 fontSize: '13px',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
               }}
             >
-              ➕ Panier
+              <ShoppingCart size={14} />
+              Panier
             </button>
             <button
               onClick={() => onViewDetails(piece)}
@@ -161,10 +167,15 @@ const handleAddToCart = () => {
                 cursor: 'pointer',
                 fontWeight: 'bold',
                 fontSize: '13px',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
               }}
             >
-              👁️ Détails
+              <Eye size={14} />
+              Détails
             </button>
           </div>
         </div>
@@ -239,10 +250,15 @@ const handleAddToCart = () => {
               borderRadius: '4px',
               cursor: 'pointer',
               fontWeight: 'bold',
-              fontSize: '13px'
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
             }}
           >
-            ➕ Ajouter au panier
+            <ShoppingCart size={14} />
+            Ajouter au panier
           </button>
 
           <button
@@ -256,10 +272,15 @@ const handleAddToCart = () => {
               borderRadius: '4px',
               cursor: 'pointer',
               fontWeight: 'bold',
-              fontSize: '13px'
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
             }}
           >
-            👁️ Voir détails
+            <Eye size={14} />
+            Voir détails
           </button>
         </div>
       )}

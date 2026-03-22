@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { Wrench, CableCar, Layers, Users } from 'lucide-react'
 import AdminPiecesManagement from '../components/Admin/AdminPiecesManagement'
 import AdminProjectsManagement from '../components/Admin/AdminProjectsManagement'
 import AdminSubAssembliesManagement from '../components/Admin/AdminSubAssembliesManagement'
@@ -20,7 +21,7 @@ export default function AdminPage() {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h1 style={{ color: '#042C53', marginBottom: '20px' }}>⚙️ Administration</h1>
+      <h1 style={{ color: '#042C53', marginBottom: '20px' }}>Administration</h1>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #E6F1FB', paddingBottom: '10px' }}>
@@ -34,9 +35,13 @@ export default function AdminPage() {
             cursor: 'pointer',
             borderRadius: '8px',
             fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          📦 Pièces
+          <Wrench size={18} />
+          Pièces
         </button>
         <button
           onClick={() => setActiveTab('projects')}
@@ -48,9 +53,13 @@ export default function AdminPage() {
             cursor: 'pointer',
             borderRadius: '8px',
             fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          🏢 Projets
+          <CableCar size={18} />
+          Projets
         </button>
         <button
           onClick={() => setActiveTab('subassemblies')}
@@ -62,9 +71,13 @@ export default function AdminPage() {
             cursor: 'pointer',
             borderRadius: '8px',
             fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          🔩 Sous-ensembles
+          <Layers size={18} />
+          Sous-ensembles
         </button>
         <button
           onClick={() => setActiveTab('users')}
@@ -76,9 +89,13 @@ export default function AdminPage() {
             cursor: 'pointer',
             borderRadius: '8px',
             fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          👥 Utilisateurs
+          <Users size={18} />
+          Utilisateurs
         </button>
       </div>
 

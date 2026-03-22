@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../utils/supabaseClient'
 import { useCart } from '../hooks/useCart'
 import { useCatalog } from '../hooks/useCatalog'
+import { Search, Factory, Building2, Layers, RotateCcw, Plus, CableCar } from 'lucide-react'
 import PieceCard from '../components/Catalog/PieceCard'
 import PieceModal from '../components/Catalog/PieceModal'
 
@@ -363,7 +364,10 @@ export default function CatalogPage() {
           borderRadius: '8px'
         }}>
           <div>
-            <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🔍 Recherche</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>
+              <Search size={16} />
+              Recherche
+            </label>
             <input
               type="text"
               placeholder="N° interne, dénomination..."
@@ -381,7 +385,10 @@ export default function CatalogPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🏭 Fournisseur</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>
+              <Factory size={16} />
+              Fournisseur
+            </label>
             <select
               value={selectedSupplier}
               onChange={(e) => handleSupplierChange(e.target.value)}
@@ -402,7 +409,10 @@ export default function CatalogPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🏢 Projet</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>
+              <CableCar size={16} />
+              Projet
+            </label>
             <select
               value={selectedProject}
               onChange={(e) => handleProjectChange(e.target.value)}
@@ -423,7 +433,10 @@ export default function CatalogPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>🔩 Sous-ensemble</label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#042C53', fontWeight: 'bold', marginBottom: '6px', fontSize: '12px' }}>
+              <Layers size={16} />
+              Sous-ensemble
+            </label>
             <select
               value={selectedSubAssembly}
               onChange={(e) => handleSubAssemblyChange(e.target.value)}
@@ -462,10 +475,15 @@ export default function CatalogPage() {
                 borderRadius: '4px',
                 cursor: 'pointer',
                 fontSize: '13px',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
               }}
             >
-              ↻ Réinitialiser
+              <RotateCcw size={14} />
+              Réinitialiser
             </button>
           </div>
         </div>
@@ -484,10 +502,15 @@ export default function CatalogPage() {
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
               }}
             >
-              ➕ Commander ce sous-ensemble complet
+              <Plus size={18} />
+              Commander ce sous-ensemble complet
             </button>
           </div>
         )}

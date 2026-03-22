@@ -116,6 +116,7 @@ export default function CartPage() {
                 <tr style={styles.headerRow}>
                   <th style={styles.th}>N° Interne</th>
                   <th style={styles.th}>Dénomination</th>
+                  <th style={styles.th}>N° Fournisseur</th>
                   <th style={styles.th}>Fournisseur</th>
                   <th style={styles.th}>N° Dessin</th>
                   <th style={styles.th}>Position</th>
@@ -130,6 +131,7 @@ export default function CartPage() {
                   <tr key={item.id} style={{...styles.row, backgroundColor: idx % 2 === 0 ? 'white' : '#f9f9f9'}}>
                     <td style={styles.td}>{item.numero_interne}</td>
                     <td style={styles.td}>{item.denomination}</td>
+                    <td style={styles.td}>{item.numero_fournisseur}</td>
                     <td style={styles.td}>{item.fournisseur}</td>
                     <td style={styles.td}>{item.numero_dessin || '-'}</td>
                     <td style={styles.td}>{item.position_dessin || '-'}</td>
