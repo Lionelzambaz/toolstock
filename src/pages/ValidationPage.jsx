@@ -44,7 +44,7 @@ export default function ValidationPage() {
         .from('command_items')
         .select(`
           *,
-          pieces(numero_interne, denomination, fournisseur, numero_fournisseur)
+          pieces(numero_interne, denomination, fournisseur, numero_fournisseur, numero_dessin, position_dessin)
         `)
         .eq('command_id', commandId)
       
@@ -237,6 +237,8 @@ export default function ValidationPage() {
                         <tr style={styles.tableHeader}>
                           <th style={styles.th}>N° Interne</th>
                           <th style={styles.th}>Dénomination</th>
+                          <th style={styles.th}>N° Dessin</th>
+                          <th style={styles.th}>Position</th>
                           <th style={styles.th}>Qty</th>
                           <th style={styles.th}>Prix U</th>
                           <th style={styles.th}>Total</th>
@@ -248,6 +250,8 @@ export default function ValidationPage() {
                           <tr key={item.id} style={{backgroundColor: idx % 2 === 0 ? 'white' : '#f9f9f9'}}>
                             <td style={styles.td}>{item.pieces.numero_interne}</td>
                             <td style={styles.td}>{item.pieces.denomination}</td>
+                            <td style={styles.td}>{item.pieces.numero_dessin || '-'}</td>
+                            <td style={styles.td}>{item.pieces.position_dessin || '-'}</td>
                             <td style={styles.td}>
                               <input
                                 type="number"

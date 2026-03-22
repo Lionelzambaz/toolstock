@@ -43,28 +43,28 @@ export async function generatePDF(command, commandDetails, userProfile) {
 
       <!-- Tableau items -->
       <h3 style="color: #042C53; margin-top: 20px; margin-bottom: 10px;">Pièces commandées</h3>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px;">
         <thead>
           <tr style="background-color: #185FA5; color: white;">
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">N° Interne</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">N° Fournisseur</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">Dénomination</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">Fournisseur</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">Qty</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">Prix U</th>
-            <th style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">Sous-total</th>
+            <th style="border: 1px solid #ddd; padding: 5px; text-align: left; font-weight: bold;">N° Int</th>
+            <th style="border: 1px solid #ddd; padding: 5px; text-align: left; font-weight: bold;">N° Fourni</th>
+            <th style="border: 1px solid #ddd; padding: 5px; text-align: left; font-weight: bold;">Fournisseur</th>
+            <th style="border: 1px solid #ddd; padding: 5px; text-align: left; font-weight: bold;">Dénomination</th>
+            <th style="border: 1px solid #ddd; padding: 5px; text-align: center; font-weight: bold;">Qty</th>
+            <th style="border: 1px solid #ddd; padding: 5px; text-align: right; font-weight: bold;">Prix U</th>
+            <th style="border: 1px solid #ddd; padding: 5px; text-align: right; font-weight: bold;">Sous-total</th>
           </tr>
         </thead>
         <tbody>
           ${commandDetails.map((item, idx) => `
             <tr style="background-color: ${idx % 2 === 0 ? 'white' : '#f9f9f9'};">
-              <td style="border: 1px solid #ddd; padding: 8px;">${item.pieces.numero_interne}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${item.pieces.numero_fournisseur}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${item.pieces.denomination}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${item.pieces.fournisseur}</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantite}</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${item.prix_unitaire.toFixed(2)} CHF</td>
-              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;"><strong>${(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong></td>
+              <td style="border: 1px solid #ddd; padding: 5px;">${item.pieces.numero_interne}</td>
+              <td style="border: 1px solid #ddd; padding: 5px;">${item.pieces.numero_fournisseur}</td>
+              <td style="border: 1px solid #ddd; padding: 5px;">${item.pieces.fournisseur}</td>
+              <td style="border: 1px solid #ddd; padding: 5px;">${item.pieces.denomination}</td>
+              <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${item.quantite}</td>
+              <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">${item.prix_unitaire.toFixed(2)} CHF</td>
+              <td style="border: 1px solid #ddd; padding: 5px; text-align: right;"><strong>${(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong></td>
             </tr>
           `).join('')}
         </tbody>

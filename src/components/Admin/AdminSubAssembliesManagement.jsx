@@ -7,6 +7,7 @@ export default function AdminSubAssembliesManagement() {
   const [subAssemblies, setSubAssemblies] = useState([])
   const [pieces, setPieces] = useState([])
   const [projects, setProjects] = useState([])
+  const [searchText, setSearchText] = useState('')
   const [formData, setFormData] = useState({
     nom: '',
     description: ''
@@ -131,9 +132,30 @@ export default function AdminSubAssembliesManagement() {
     }
   }
 
+  // Filtrer les sous-ensembles selon la recherche
+  const filteredSubAssemblies = subAssemblies.filter(sub => {
+    const search = searchText.toLowerCase()
+    return sub.nom.toLowerCase().includes(search)
+  })
+
   return (
     <div>
-      <h2 style={{ color: '#042C53' }}>Gestion des Sous-ensembles</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ color: '#042C53', margin: 0 }}>Gestion des Sous-ensembles</h2>
+        <input
+          type="text"
+          placeholder="🔍 Rechercher..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #185FA5',
+            borderRadius: '4px',
+            fontSize: '13px',
+            width: '250px'
+          }}
+        />
+      </div>
 
       {error && <p style={{ color: '#A32D2D' }}>❌ {error}</p>}
       {success && <p style={{ color: '#27500A' }}>✅ {success}</p>}
@@ -221,13 +243,13 @@ export default function AdminSubAssembliesManagement() {
           </tr>
         </thead>
         <tbody>
-          {subAssemblies.map((sub, idx) => (
+          {filteredSubAssemblies.map((sub, idx) => (
             <tr key={sub.id} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#E6F1FB', borderBottom: '1px solid #E6F1FB' }}>
               <td style={{ padding: '10px' }}>{sub.nom}</td>
               <td style={{ padding: '10px' }}>{sub.description}</td>
               <td style={{ padding: '10px', textAlign: 'center' }}>
-                <button onClick={() => handleEdit(sub)} style={{ padding: '5px 10px', marginRight: '5px', backgroundColor: '#185FA5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>✏️ Éditer</button>
-                <button onClick={() => handleDelete(sub.id)} style={{ padding: '5px 10px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🗑️ Supprimer</button>
+                <button onClick={() => handleEdit(sub)} style={{ padding: '5px 8px', marginRight: '5px', backgroundColor: '#185FA5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Edit</button>
+                <button onClick={() => handleDelete(sub.id)} style={{ padding: '5px 8px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Supp</button>
               </td>
             </tr>
           ))}

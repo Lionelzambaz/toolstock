@@ -7,14 +7,17 @@ export default function AdminPiecesManagement() {
   const [pieces, setPieces] = useState([])
   const [projects, setProjects] = useState([])
   const [subAssemblies, setSubAssemblies] = useState([])
+  const [searchText, setSearchText] = useState('')
   const [formData, setFormData] = useState({
-    numero_fournisseur: '',
-    numero_interne: '',
-    fournisseur: '',
-    denomination: '',
-    descriptif: '',
-    prix_unitaire: ''
-  })
+      numero_fournisseur: '',
+      numero_interne: '',
+      fournisseur: '',
+      denomination: '',
+      descriptif: '',
+      prix_unitaire: '',
+      numero_dessin: '',
+      position_dessin: ''
+    })
   const [editingId, setEditingId] = useState(null)
   const [selectedProjects, setSelectedProjects] = useState([])
   const [selectedSubAssemblies, setSelectedSubAssemblies] = useState([])
@@ -54,7 +57,7 @@ export default function AdminPiecesManagement() {
       await createPiece(formData)
     }
 
-    setFormData({ numero_fournisseur: '', numero_interne: '', fournisseur: '', denomination: '', descriptif: '', prix_unitaire: '' })
+    setFormData({ numero_fournisseur: '', numero_interne: '', fournisseur: '', denomination: '', descriptif: '', prix_unitaire: '', numero_dessin: '', position_dessin: '' })
     setSelectedProjects([])
     setSelectedSubAssemblies([])
     await loadData()
@@ -122,9 +125,35 @@ export default function AdminPiecesManagement() {
     setSelectedSubAssemblies(subAssData || [])
   }
 
+  // Filtrer les pièces selon la recherche
+  const filteredPieces = pieces.filter(piece => {
+    const search = searchText.toLowerCase()
+    return (
+      piece.denomination.toLowerCase().includes(search) ||
+      piece.numero_interne.toLowerCase().includes(search) ||
+      piece.numero_fournisseur.toLowerCase().includes(search) ||
+      piece.fournisseur.toLowerCase().includes(search)
+    )
+  })
+
   return (
     <div>
-      <h2 style={{ color: '#042C53' }}>Gestion des Pièces</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 style={{ color: '#042C53', margin: 0 }}>Gestion des Pièces</h2>
+        <input
+          type="text"
+          placeholder="🔍 Rechercher..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #185FA5',
+            borderRadius: '4px',
+            fontSize: '13px',
+            width: '250px'
+          }}
+        />
+      </div>
 
       {error && <p style={{ color: '#A32D2D' }}>❌ {error}</p>}
       {success && <p style={{ color: '#27500A' }}>✅ {success}</p>}
@@ -137,6 +166,8 @@ export default function AdminPiecesManagement() {
           <input type="text" name="fournisseur" placeholder="Fournisseur" value={formData.fournisseur} onChange={handleInputChange} required style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
           <input type="text" name="denomination" placeholder="Dénomination" value={formData.denomination} onChange={handleInputChange} required style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
           <input type="number" name="prix_unitaire" placeholder="Prix unitaire (CHF)" value={formData.prix_unitaire} onChange={handleInputChange} step="0.01" required style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
+          <input type="text" name="numero_dessin" placeholder="N° Dessin" value={formData.numero_dessin} onChange={handleInputChange} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
+          <input type="text" name="position_dessin" placeholder="Position sur dessin" value={formData.position_dessin} onChange={handleInputChange} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
           <textarea name="descriptif" placeholder="Descriptif" value={formData.descriptif} onChange={handleInputChange} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px', gridColumn: '1 / -1' }} />
         </div>
 
@@ -198,7 +229,7 @@ export default function AdminPiecesManagement() {
         <button type="submit" disabled={loading} style={{ padding: '10px 20px', backgroundColor: '#185FA5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
           {editingId ? 'Mettre à jour' : 'Créer'}
         </button>
-        {editingId && <button type="button" onClick={() => { setEditingId(null); setFormData({ numero_fournisseur: '', numero_interne: '', fournisseur: '', denomination: '', descriptif: '', prix_unitaire: '' }); setSelectedProjects([]); setSelectedSubAssemblies([]) }} style={{ marginLeft: '10px', padding: '10px 20px', backgroundColor: '#888780', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Annuler</button>}
+        {editingId && <button type="button" onClick={() => { setEditingId(null); setFormData({ numero_fournisseur: '', numero_interne: '', fournisseur: '', denomination: '', descriptif: '', prix_unitaire: '', numero_dessin: '', position_dessin: '' }); setSelectedProjects([]); setSelectedSubAssemblies([]) }} style={{ marginLeft: '10px', padding: '10px 20px', backgroundColor: '#888780', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Annuler</button>}
       </form>
 
       {/* Tableau */}
@@ -207,21 +238,27 @@ export default function AdminPiecesManagement() {
           <tr style={{ backgroundColor: '#042C53', color: 'white' }}>
             <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #185FA5' }}>N° Interne</th>
             <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #185FA5' }}>Dénomination</th>
+            <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #185FA5' }}>N° Fournisseur</th>
             <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #185FA5' }}>Fournisseur</th>
+            <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #185FA5' }}>N° Dessin</th>
+            <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #185FA5' }}>Position</th>
             <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #185FA5' }}>Prix</th>
             <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #185FA5' }}>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {pieces.map((piece, idx) => (
+          {filteredPieces.map((piece, idx) => (
             <tr key={piece.id} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#E6F1FB', borderBottom: '1px solid #E6F1FB' }}>
               <td style={{ padding: '10px' }}>{piece.numero_interne}</td>
               <td style={{ padding: '10px' }}>{piece.denomination}</td>
+              <td style={{ padding: '10px' }}>{piece.numero_fournisseur}</td>
               <td style={{ padding: '10px' }}>{piece.fournisseur}</td>
+              <td style={{ padding: '10px' }}>{piece.numero_dessin || '-'}</td>
+              <td style={{ padding: '10px' }}>{piece.position_dessin || '-'}</td>
               <td style={{ padding: '10px' }}>{piece.prix_unitaire} CHF</td>
               <td style={{ padding: '10px', textAlign: 'center' }}>
-                <button onClick={() => handleEdit(piece)} style={{ padding: '5px 10px', marginRight: '5px', backgroundColor: '#185FA5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>✏️ Éditer</button>
-                <button onClick={() => handleDelete(piece.id)} style={{ padding: '5px 10px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🗑️ Supprimer</button>
+                <button onClick={() => handleEdit(piece)} style={{ padding: '5px 8px', marginRight: '5px', backgroundColor: '#185FA5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Edit</button>
+                <button onClick={() => handleDelete(piece.id)} style={{ padding: '5px 8px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Supp</button>
               </td>
             </tr>
           ))}

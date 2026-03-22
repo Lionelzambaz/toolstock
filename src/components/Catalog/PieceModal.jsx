@@ -74,6 +74,14 @@ export default function PieceModal({ piece, isOpen, onClose, onAddToCart }) {
             <p style={{ color: '#042C53', fontWeight: 'bold', margin: '0' }}>{piece.fournisseur}</p>
           </div>
           <div style={{ padding: '10px', backgroundColor: '#F5F5F5', borderRadius: '6px' }}>
+            <p style={{ color: '#888780', fontSize: '12px', margin: '0 0 5px 0' }}>N° Dessin</p>
+            <p style={{ color: '#042C53', fontWeight: 'bold', margin: '0' }}>{piece.numero_dessin || '-'}</p>
+          </div>
+          <div style={{ padding: '10px', backgroundColor: '#F5F5F5', borderRadius: '6px' }}>
+            <p style={{ color: '#888780', fontSize: '12px', margin: '0 0 5px 0' }}>Position</p>
+            <p style={{ color: '#042C53', fontWeight: 'bold', margin: '0' }}>{piece.position_dessin || '-'}</p>
+          </div>
+          <div style={{ padding: '10px', backgroundColor: '#F5F5F5', borderRadius: '6px' }}>
             <p style={{ color: '#888780', fontSize: '12px', margin: '0 0 5px 0' }}>Prix unitaire</p>
             <p style={{ color: '#27500A', fontWeight: 'bold', fontSize: '18px', margin: '0' }}>{piece.prix_unitaire} CHF</p>
           </div>

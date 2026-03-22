@@ -59,6 +59,22 @@ const handleAddToCart = () => {
           </p>
         </div>
 
+        {/* N° Dessin et Position */}
+        <div style={{ marginBottom: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div>
+            <p style={{ color: '#888780', fontSize: '11px', margin: '0 0 2px 0' }}>N° Dessin</p>
+            <p style={{ color: '#042C53', fontSize: '13px', fontWeight: 'bold', margin: '0' }}>
+              {piece.numero_dessin || '-'}
+            </p>
+          </div>
+          <div>
+            <p style={{ color: '#888780', fontSize: '11px', margin: '0 0 2px 0' }}>Position</p>
+            <p style={{ color: '#042C53', fontSize: '13px', fontWeight: 'bold', margin: '0' }}>
+              {piece.position_dessin || '-'}
+            </p>
+          </div>
+        </div>
+
         {/* Description courte */}
         {piece.descriptif && (
           <div style={{ marginBottom: '8px' }}>
@@ -174,6 +190,20 @@ const handleAddToCart = () => {
             <p style={{ color: '#888780', fontSize: '11px', margin: '0 0 3px 0' }}>Prix</p>
             <p style={{ color: '#27500A', fontSize: '15px', fontWeight: 'bold', margin: '0' }}>
               {piece.prix_unitaire} CHF
+            </p>
+          </div>
+
+          <div>
+            <p style={{ color: '#888780', fontSize: '11px', margin: '0 0 3px 0' }}>N° Dessin</p>
+            <p style={{ color: '#042C53', fontSize: '13px', fontWeight: 'bold', margin: '0' }}>
+              {piece.numero_dessin || '-'}
+            </p>
+          </div>
+
+          <div>
+            <p style={{ color: '#888780', fontSize: '11px', margin: '0 0 3px 0' }}>Position</p>
+            <p style={{ color: '#042C53', fontSize: '13px', fontWeight: 'bold', margin: '0' }}>
+              {piece.position_dessin || '-'}
             </p>
           </div>
 

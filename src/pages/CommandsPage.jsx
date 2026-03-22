@@ -57,7 +57,7 @@ export default function CommandsPage() {
         .from('command_items')
         .select(`
           *,
-          pieces(numero_interne, denomination, fournisseur, numero_fournisseur)
+          pieces(numero_interne, denomination, fournisseur, numero_fournisseur, numero_dessin, position_dessin)
         `)
         .eq('command_id', commandId)
       
@@ -157,7 +157,7 @@ async function handleViewCommand(command) {
           .from('command_items')
           .select(`
             *,
-            pieces(numero_interne, denomination, fournisseur, numero_fournisseur)
+            pieces(numero_interne, denomination, fournisseur, numero_fournisseur, numero_dessin, position_dessin)
           `)
           .eq('command_id', cmd.id)
         
@@ -361,6 +361,8 @@ async function handleViewCommand(command) {
                         <th style={styles.th}>N° Interne</th>
                         <th style={styles.th}>Dénomination</th>
                         <th style={styles.th}>Fournisseur</th>
+                        <th style={styles.th}>N° Dessin</th>
+                        <th style={styles.th}>Position</th>
                         <th style={styles.th}>Quantité</th>
                         <th style={styles.th}>Prix U</th>
                         <th style={styles.th}>Sous-total</th>
@@ -372,6 +374,8 @@ async function handleViewCommand(command) {
                           <td style={styles.td}>{item.pieces.numero_interne}</td>
                           <td style={styles.td}>{item.pieces.denomination}</td>
                           <td style={styles.td}>{item.pieces.fournisseur}</td>
+                          <td style={styles.td}>{item.pieces.numero_dessin || '-'}</td>
+                          <td style={styles.td}>{item.pieces.position_dessin || '-'}</td>
                           <td style={styles.td}>{item.quantite}</td>
                           <td style={styles.td}>{item.prix_unitaire.toFixed(2)} CHF</td>
                           <td style={styles.td}><strong>{(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong></td>

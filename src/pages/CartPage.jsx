@@ -117,6 +117,8 @@ export default function CartPage() {
                   <th style={styles.th}>N° Interne</th>
                   <th style={styles.th}>Dénomination</th>
                   <th style={styles.th}>Fournisseur</th>
+                  <th style={styles.th}>N° Dessin</th>
+                  <th style={styles.th}>Position</th>
                   <th style={styles.th}>Prix U</th>
                   <th style={styles.th}>Quantité</th>
                   <th style={styles.th}>Sous-total</th>
@@ -129,6 +131,8 @@ export default function CartPage() {
                     <td style={styles.td}>{item.numero_interne}</td>
                     <td style={styles.td}>{item.denomination}</td>
                     <td style={styles.td}>{item.fournisseur}</td>
+                    <td style={styles.td}>{item.numero_dessin || '-'}</td>
+                    <td style={styles.td}>{item.position_dessin || '-'}</td>
                     <td style={styles.td}>{item.prix_unitaire.toFixed(2)} CHF</td>
                     <td style={styles.td}>
                       <input
