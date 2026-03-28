@@ -37,6 +37,8 @@ export function useCart() {
           fournisseur: piece.fournisseur,
           numero_fournisseur: piece.numero_fournisseur,
           prix_unitaire: piece.prix_unitaire,
+          numero_dessin: piece.numero_dessin,
+          position_dessin: piece.position_dessin,
           quantite: quantity
         }]
       }

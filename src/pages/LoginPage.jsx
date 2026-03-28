@@ -35,6 +35,9 @@ export function LoginPage() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+        <div style={styles.logoContainer}>
+          <img src="/logo-512.png" alt="ToolStock" style={styles.logo} />
+        </div>
         <h1 style={styles.title}>ToolStock</h1>
         <p style={styles.subtitle}>Gestion de commandes de pièces</p>
         
@@ -74,13 +77,6 @@ export function LoginPage() {
           </button>
         </form>
 
-        <p style={styles.info}>
-          Utilisateurs de test :<br/>
-          jean.mecanicien@toolstock.ch (mécanicien)<br/>
-          marie.chef@toolstock.ch (chef)<br/>
-          admin@toolstock.ch (admin)<br/>
-          Mot de passe : (défini dans Supabase)
-        </p>
       </div>
     </div>
   )
@@ -102,6 +98,16 @@ const styles = {
     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
     maxWidth: '400px',
     width: '100%'
+  },
+  logoContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '16px'
+  },
+  logo: {
+    width: '80px',
+    height: '80px',
+    objectFit: 'contain'
   },
   title: {
     textAlign: 'center',

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import AdminMenuVertical from './AdminMenuVertical'
@@ -5,6 +6,13 @@ import AdminMenuVertical from './AdminMenuVertical'
 export function Layout({ children }) {
   const { userProfile, logout } = useAuth()
   const navigate = useNavigate()
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   async function handleLogout() {
     await logout()
@@ -17,7 +25,7 @@ export function Layout({ children }) {
       <AdminMenuVertical />
 
       {/* Header */}
-      <header style={styles.header}>
+      <header style={{ ...styles.header, marginLeft: isMobile ? 0 : '62px' }}>
         <div style={styles.headerContent}>
           <h1 style={styles.logo}>ToolStock</h1>
           <div style={styles.userInfo}>
@@ -38,7 +46,7 @@ export function Layout({ children }) {
       </header>
 
       {/* Main content */}
-      <main style={styles.content}>
+      <main style={{ ...styles.content, marginLeft: isMobile ? 0 : '62px', padding: isMobile ? '15px' : '30px' }}>
         {children}
       </main>
     </div>

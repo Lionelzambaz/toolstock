@@ -52,7 +52,9 @@ export function useCatalog() {
             denomination,
             prix_unitaire,
             fournisseur,
-            numero_fournisseur
+            numero_fournisseur,
+            numero_dessin,
+            position_dessin
           )
         `)
         .eq('sub_assembly_id', subAssemblyId)

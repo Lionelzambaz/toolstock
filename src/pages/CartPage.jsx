@@ -8,6 +8,13 @@ export default function CartPage() {
   const { cartItems, removeItem, updateQuantity, clearCart, getTotalPrice, getTotalItems } = useCart()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
   const [projectId, setProjectId] = useState('')
   const [remarques, setRemarques] = useState('')
   const [projects, setProjects] = useState([])
@@ -116,13 +123,13 @@ export default function CartPage() {
                 <tr style={styles.headerRow}>
                   <th style={styles.th}>N° Interne</th>
                   <th style={styles.th}>Dénomination</th>
-                  <th style={styles.th}>N° Fournisseur</th>
-                  <th style={styles.th}>Fournisseur</th>
-                  <th style={styles.th}>N° Dessin</th>
-                  <th style={styles.th}>Position</th>
+                  {!isMobile && <th style={styles.th}>N° Fournisseur</th>}
+                  {!isMobile && <th style={styles.th}>Fournisseur</th>}
+                  {!isMobile && <th style={styles.th}>N° Dessin</th>}
+                  {!isMobile && <th style={styles.th}>Position</th>}
                   <th style={styles.th}>Prix U</th>
-                  <th style={styles.th}>Quantité</th>
-                  <th style={styles.th}>Sous-total</th>
+                  <th style={styles.th}>Qté</th>
+                  {!isMobile && <th style={styles.th}>Sous-total</th>}
                   <th style={styles.th}>Action</th>
                 </tr>
               </thead>
@@ -131,10 +138,10 @@ export default function CartPage() {
                   <tr key={item.id} style={{...styles.row, backgroundColor: idx % 2 === 0 ? 'white' : '#f9f9f9'}}>
                     <td style={styles.td}>{item.numero_interne}</td>
                     <td style={styles.td}>{item.denomination}</td>
-                    <td style={styles.td}>{item.numero_fournisseur}</td>
-                    <td style={styles.td}>{item.fournisseur}</td>
-                    <td style={styles.td}>{item.numero_dessin || '-'}</td>
-                    <td style={styles.td}>{item.position_dessin || '-'}</td>
+                    {!isMobile && <td style={styles.td}>{item.numero_fournisseur}</td>}
+                    {!isMobile && <td style={styles.td}>{item.fournisseur}</td>}
+                    {!isMobile && <td style={styles.td}>{item.numero_dessin || '-'}</td>}
+                    {!isMobile && <td style={styles.td}>{item.position_dessin || '-'}</td>}
                     <td style={styles.td}>{item.prix_unitaire.toFixed(2)} CHF</td>
                     <td style={styles.td}>
                       <input
@@ -145,15 +152,15 @@ export default function CartPage() {
                         style={styles.qtyInput}
                       />
                     </td>
-                    <td style={styles.td}>
+                    {!isMobile && <td style={styles.td}>
                       <strong>{(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong>
-                    </td>
+                    </td>}
                     <td style={styles.td}>
                       <button
                         onClick={() => removeItem(item.id)}
                         style={styles.removeBtn}
                       >
-                        Supprimer
+                        {isMobile ? '✕' : 'Supprimer'}
                       </button>
                     </td>
                   </tr>
@@ -260,7 +267,7 @@ const styles = {
   tableContainer: {
     backgroundColor: 'white',
     borderRadius: '8px',
-    overflow: 'hidden',
+    overflowX: 'auto',
     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
     marginBottom: '20px'
   },

@@ -100,7 +100,7 @@ export default function AdminPiecesManagement() {
   }
 
   const handleAddSubAssembly = async (pieceId) => {
-    if (newSubAssemblyId && newSubAssemblyQty > 0) {
+    if (newSubAssemblyId && newSubAssemblyQty >= 0) {
       await supabase.from('sub_assembly_pieces').insert({
         piece_id: pieceId,
         sub_assembly_id: newSubAssemblyId,
@@ -171,6 +171,37 @@ export default function AdminPiecesManagement() {
           <textarea name="descriptif" placeholder="Descriptif" value={formData.descriptif} onChange={handleInputChange} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px', gridColumn: '1 / -1' }} />
         </div>
 
+        {/* Sous-ensembles */}
+        <h4 style={{ color: '#042C53', marginTop: '15px' }}>Sous-ensembles utilisant cette pièce</h4>
+        <p style={{ fontSize: '13px', color: '#888780', marginTop: '0', marginBottom: '10px' }}>
+          💡 <strong>Quantité 0 = Pièce optionnelle:</strong> Elle n'est pas ajoutée au panier quand on commande ce sous-ensemble, mais reste visible dans le catalogue.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '10px', marginBottom: '10px', alignItems: 'end' }}>
+          <select value={newSubAssemblyId} onChange={(e) => setNewSubAssemblyId(e.target.value)} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }}>
+            <option value="">Sélectionner un sous-ensemble</option>
+            {subAssemblies.map(s => (
+              <option key={s.id} value={s.id}>{s.nom}</option>
+            ))}
+          </select>
+          <input type="number" value={newSubAssemblyQty} onChange={(e) => setNewSubAssemblyQty(e.target.value)} min="0" style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
+          <button type="button" onClick={() => editingId && handleAddSubAssembly(editingId)} disabled={!editingId || !newSubAssemblyId} style={{ padding: '8px 15px', backgroundColor: '#27500A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>➕ Ajouter</button>
+        </div>
+
+        {selectedSubAssemblies.length > 0 && (
+          <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
+            <h5>Sous-ensembles sélectionnés:</h5>
+            {selectedSubAssemblies.map((subAssItem) => {
+              const subAss = subAssemblies.find(s => s.id === subAssItem.sub_assembly_id)
+              return (
+                <div key={subAssItem.sub_assembly_id} style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#D4E5F7', padding: '3px 5px', borderRadius: '3px', marginBottom: '2px' }}>
+                  <span>{subAss?.nom} (× {subAssItem.quantite})</span>
+                  <button type="button" onClick={() => editingId && handleRemoveSubAssembly(editingId, subAssItem.sub_assembly_id)} style={{ padding: '0px 4px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '10px' }}>✕</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         {/* Projets */}
         <h4 style={{ color: '#042C53', marginTop: '15px' }}>Projets utilisant cette pièce</h4>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr auto', gap: '10px', marginBottom: '10px', alignItems: 'end' }}>
@@ -192,34 +223,6 @@ export default function AdminPiecesManagement() {
                 <div key={projId} style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#D4E5F7', padding: '3px 5px', borderRadius: '3px', marginBottom: '2px' }}>
                   <span>{proj?.nom}</span>
                   <button type="button" onClick={() => editingId && handleRemoveProject(editingId, projId)} style={{ padding: '0px 4px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '10px' }}>✕</button>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Sous-ensembles */}
-        <h4 style={{ color: '#042C53', marginTop: '15px' }}>Sous-ensembles utilisant cette pièce</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '10px', marginBottom: '10px', alignItems: 'end' }}>
-          <select value={newSubAssemblyId} onChange={(e) => setNewSubAssemblyId(e.target.value)} style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }}>
-            <option value="">Sélectionner un sous-ensemble</option>
-            {subAssemblies.map(s => (
-              <option key={s.id} value={s.id}>{s.nom}</option>
-            ))}
-          </select>
-          <input type="number" value={newSubAssemblyQty} onChange={(e) => setNewSubAssemblyQty(e.target.value)} min="1" style={{ padding: '8px', border: '1px solid #185FA5', borderRadius: '4px' }} />
-          <button type="button" onClick={() => editingId && handleAddSubAssembly(editingId)} disabled={!editingId || !newSubAssemblyId} style={{ padding: '8px 15px', backgroundColor: '#27500A', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>➕ Ajouter</button>
-        </div>
-
-        {selectedSubAssemblies.length > 0 && (
-          <div style={{ marginBottom: '10px', padding: '10px', backgroundColor: 'white', borderRadius: '4px' }}>
-            <h5>Sous-ensembles sélectionnés:</h5>
-            {selectedSubAssemblies.map((subAssItem) => {
-              const subAss = subAssemblies.find(s => s.id === subAssItem.sub_assembly_id)
-              return (
-                <div key={subAssItem.sub_assembly_id} style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: '#D4E5F7', padding: '3px 5px', borderRadius: '3px', marginBottom: '2px' }}>
-                  <span>{subAss?.nom} (× {subAssItem.quantite})</span>
-                  <button type="button" onClick={() => editingId && handleRemoveSubAssembly(editingId, subAssItem.sub_assembly_id)} style={{ padding: '0px 4px', backgroundColor: '#A32D2D', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer', fontSize: '10px' }}>✕</button>
                 </div>
               )
             })}

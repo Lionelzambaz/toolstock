@@ -19,9 +19,10 @@ export async function generatePDF(command, commandDetails, userProfile) {
 
     // En-tête
     element.innerHTML = `
-      <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #042C53; padding-bottom: 15px;">
-        <h1 style="margin: 0; color: #042C53; font-size: 24px;">ToolStock</h1>
-        <h2 style="margin: 5px 0 0 0; color: #185FA5; font-size: 18px;">BON DE COMMANDE</h2>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #042C53; padding-bottom: 15px;">
+        <img src="/logo-horizontal.png" style="height: 40px; object-fit: contain;" />
+        <h2 style="margin: 0; color: #185FA5; font-size: 20px; font-weight: bold;">BON DE COMMANDE</h2>
+        <img src="/logo-nvrm.png" style="height: 38px; object-fit: contain;" />
       </div>
 
       <!-- Infos commande -->
