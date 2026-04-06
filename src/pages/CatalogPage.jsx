@@ -285,11 +285,19 @@ export default function CatalogPage() {
         return
       }
 
+      // Trouver le nom du sous-ensemble sélectionné
+      const subAssembly = subAssemblies.find(sa => sa.id === selectedSubAssembly)
+      const sousEnsembleMeta = {
+        id: selectedSubAssembly,
+        nom: subAssembly?.nom || 'Inconnu',
+        quantite: parseInt(count)
+      }
+
       // Ajouter chaque pièce au panier (ignorer qty=0)
       let itemsAdded = 0
       composition.forEach(item => {
         if (item.quantite > 0) {
-          addItem(item.pieces, item.quantite * parseInt(count))
+          addItem(item.pieces, item.quantite * parseInt(count), sousEnsembleMeta)
           itemsAdded++
         }
       })
@@ -298,8 +306,8 @@ export default function CatalogPage() {
       const totalQty = composition
         .filter(c => c.quantite > 0)
         .reduce((sum, c) => sum + (c.quantite * parseInt(count)), 0)
-      
-      setNotification(`✅ ${totalQty} items ajoutés au panier!`)
+
+      setNotification(`✅ ${totalQty} pièces ajoutées — ${sousEnsembleMeta.nom} × ${count}`)
       setTimeout(() => setNotification(null), 3000)
     } catch (err) {
       console.error('Erreur:', err)

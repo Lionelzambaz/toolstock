@@ -14,6 +14,7 @@ export default function CommandsPage() {
   const [filterCreator, setFilterCreator] = useState('')
   const [selectedCommand, setSelectedCommand] = useState(null)
   const [commandDetails, setCommandDetails] = useState(null)
+  const [detailViewMode, setDetailViewMode] = useState('subassembly')
 
   useEffect(() => {
     if (user?.id) {
@@ -57,10 +58,11 @@ export default function CommandsPage() {
         .from('command_items')
         .select(`
           *,
-          pieces(numero_interne, denomination, fournisseur, numero_fournisseur, numero_dessin, position_dessin)
+          pieces(numero_interne, denomination, fournisseur, numero_fournisseur, numero_dessin, position_dessin),
+          sub_assemblies(nom)
         `)
         .eq('command_id', commandId)
-      
+
       if (error) throw error
       setCommandDetails(data || [])
     } catch (err) {
@@ -70,6 +72,7 @@ export default function CommandsPage() {
 
 async function handleViewCommand(command) {
   setSelectedCommand(command)
+  setDetailViewMode('subassembly')
   fetchCommandDetails(command.id)
   
   // Récupérer le nom du supervisor si existe
@@ -352,7 +355,19 @@ async function handleViewCommand(command) {
                 </div>
               )}
 
-              <h4 style={styles.itemsTitle}>Pièces commandées</h4>
+              <div style={styles.detailToggleBar}>
+                <h4 style={{...styles.itemsTitle, margin: 0}}>Pièces commandées</h4>
+                <div style={{display:'flex', gap:'6px'}}>
+                  <button
+                    onClick={() => setDetailViewMode('subassembly')}
+                    style={detailViewMode === 'subassembly' ? styles.toggleBtnActive : styles.toggleBtn}
+                  >📦 Sous-ensemble</button>
+                  <button
+                    onClick={() => setDetailViewMode('article')}
+                    style={detailViewMode === 'article' ? styles.toggleBtnActive : styles.toggleBtn}
+                  >📋 Article</button>
+                </div>
+              </div>
               {commandDetails && commandDetails.length > 0 ? (
                 <div style={styles.itemsTable}>
                   <table style={styles.table}>
@@ -363,24 +378,83 @@ async function handleViewCommand(command) {
                         <th style={styles.th}>Fournisseur</th>
                         <th style={styles.th}>N° Dessin</th>
                         <th style={styles.th}>Position</th>
-                        <th style={styles.th}>Quantité</th>
+                        <th style={styles.th}>Qté {detailViewMode === 'article' ? 'totale' : ''}</th>
                         <th style={styles.th}>Prix U</th>
                         <th style={styles.th}>Sous-total</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {commandDetails.map((item, idx) => (
-                        <tr key={item.id} style={{backgroundColor: idx % 2 === 0 ? 'white' : '#f9f9f9'}}>
-                          <td style={styles.td}>{item.pieces.numero_interne}</td>
-                          <td style={styles.td}>{item.pieces.denomination}</td>
-                          <td style={styles.td}>{item.pieces.fournisseur}</td>
-                          <td style={styles.td}>{item.pieces.numero_dessin || '-'}</td>
-                          <td style={styles.td}>{item.pieces.position_dessin || '-'}</td>
-                          <td style={styles.td}>{item.quantite}</td>
-                          <td style={styles.td}>{item.prix_unitaire.toFixed(2)} CHF</td>
-                          <td style={styles.td}><strong>{(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong></td>
-                        </tr>
-                      ))}
+                      {(() => {
+                        const renderRow = (item, bgColor) => (
+                          <tr key={item.id} style={{backgroundColor: bgColor}}>
+                            <td style={styles.td}>{item.pieces.numero_interne}</td>
+                            <td style={styles.td}>{item.pieces.denomination}</td>
+                            <td style={styles.td}>{item.pieces.fournisseur}</td>
+                            <td style={styles.td}>{item.pieces.numero_dessin || '-'}</td>
+                            <td style={styles.td}>{item.pieces.position_dessin || '-'}</td>
+                            <td style={styles.td}>{item.quantite}</td>
+                            <td style={styles.td}>{item.prix_unitaire.toFixed(2)} CHF</td>
+                            <td style={styles.td}><strong>{(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong></td>
+                          </tr>
+                        )
+
+                        if (detailViewMode === 'article') {
+                          const merged = {}
+                          commandDetails.forEach(item => {
+                            if (merged[item.piece_id]) {
+                              merged[item.piece_id].quantite += item.quantite
+                            } else {
+                              merged[item.piece_id] = { ...item }
+                            }
+                          })
+                          return Object.values(merged).map((item, idx) =>
+                            renderRow(item, idx % 2 === 0 ? '#EEF5FF' : '#E3EFFE')
+                          )
+                        }
+
+                        // Vue sous-ensemble
+                        const seGroups = {}
+                        const individualItems = []
+                        commandDetails.forEach(item => {
+                          if (item.sous_ensemble_id) {
+                            if (!seGroups[item.sous_ensemble_id]) {
+                              seGroups[item.sous_ensemble_id] = {
+                                nom: item.sub_assemblies?.nom || 'Sous-ensemble',
+                                quantite: item.sous_ensemble_quantite,
+                                items: []
+                              }
+                            }
+                            seGroups[item.sous_ensemble_id].items.push(item)
+                          } else {
+                            individualItems.push(item)
+                          }
+                        })
+
+                        const rows = []
+                        Object.entries(seGroups).forEach(([seId, group]) => {
+                          rows.push(
+                            <tr key={`se-header-${seId}`}>
+                              <td colSpan={8} style={styles.seHeaderTd}>
+                                📦 <strong>{group.nom}</strong> — {group.quantite} sous-ensemble{group.quantite > 1 ? 's' : ''} commandé{group.quantite > 1 ? 's' : ''}
+                              </td>
+                            </tr>
+                          )
+                          group.items.forEach((item, idx) => {
+                            rows.push(renderRow(item, idx % 2 === 0 ? '#EEF5FF' : '#E3EFFE'))
+                          })
+                        })
+                        if (Object.keys(seGroups).length > 0 && individualItems.length > 0) {
+                          rows.push(
+                            <tr key="sep-individual">
+                              <td colSpan={8} style={styles.seSeparatorTd}>Pièces individuelles</td>
+                            </tr>
+                          )
+                        }
+                        individualItems.forEach((item, idx) => {
+                          rows.push(renderRow(item, idx % 2 === 0 ? '#EEF5FF' : '#E3EFFE'))
+                        })
+                        return rows
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -396,14 +470,12 @@ async function handleViewCommand(command) {
             </div>
 
             <div style={styles.modalFooter}>
-              {selectedCommand.status === 'validated' && (
-                <button
-                  onClick={() => generatePDF(selectedCommand, commandDetails, userProfile)}
-                  style={styles.pdfBtn}
-                >
-                  📄 Exporter PDF
-                </button>
-              )}
+              <button
+                onClick={() => generatePDF(selectedCommand, commandDetails, userProfile, detailViewMode)}
+                style={styles.pdfBtn}
+              >
+                📄 Exporter PDF
+              </button>
               <button onClick={closeDetails} style={styles.closeModalBtn}>Fermer</button>
             </div>
           </div>
@@ -653,5 +725,44 @@ const styles = {
     border: 'none',
     borderRadius: '6px',
     cursor: 'pointer'
+  },
+  detailToggleBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '10px'
+  },
+  toggleBtn: {
+    padding: '5px 12px',
+    backgroundColor: 'white',
+    color: '#185FA5',
+    border: '1px solid #185FA5',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontSize: '12px'
+  },
+  toggleBtnActive: {
+    padding: '5px 12px',
+    backgroundColor: '#185FA5',
+    color: 'white',
+    border: '1px solid #185FA5',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontSize: '12px',
+    fontWeight: '600'
+  },
+  seHeaderTd: {
+    padding: '6px 12px',
+    backgroundColor: '#042C53',
+    color: 'white',
+    fontSize: '13px',
+    fontWeight: '500'
+  },
+  seSeparatorTd: {
+    padding: '5px 12px',
+    backgroundColor: '#888780',
+    color: 'white',
+    fontSize: '12px',
+    fontStyle: 'italic'
   }
 }

@@ -15,6 +15,9 @@ export default function CartPage() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+  const [viewMode, setViewMode] = useState('subassembly') // 'subassembly' | 'article'
+  const [multiEditItem, setMultiEditItem] = useState(null)
+  const [multiEditQtys, setMultiEditQtys] = useState({})
   const [projectId, setProjectId] = useState('')
   const [remarques, setRemarques] = useState('')
   const [projects, setProjects] = useState([])
@@ -77,7 +80,9 @@ export default function CartPage() {
         command_id: command.id,
         piece_id: item.id,
         quantite: item.quantite,
-        prix_unitaire: item.prix_unitaire
+        prix_unitaire: item.prix_unitaire,
+        sous_ensemble_id: item.sous_ensemble_id || null,
+        sous_ensemble_quantite: item.sous_ensemble_quantite || null
       }))
 
       const { error: itemsError } = await supabase
@@ -98,9 +103,63 @@ export default function CartPage() {
     }
   }
 
+  function openMultiEdit(mergedItem) {
+    const qtys = {}
+    mergedItem.cartKeys.forEach(key => {
+      const cartItem = cartItems.find(i => i.cartKey === key)
+      if (cartItem) qtys[key] = cartItem.quantite
+    })
+    setMultiEditQtys(qtys)
+    setMultiEditItem(mergedItem)
+  }
+
+  function saveMultiEdit() {
+    Object.entries(multiEditQtys).forEach(([key, qty]) => {
+      updateQuantity(key, parseInt(qty) || 0)
+    })
+    setMultiEditItem(null)
+  }
+
   return (
     <div>
       <h2 style={styles.title}>Panier</h2>
+
+      {/* Modal édition quantité multi-sous-ensembles */}
+      {multiEditItem && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.multiEditModal}>
+            <h3 style={styles.multiEditTitle}>Quantités — {multiEditItem.denomination}</h3>
+            <p style={styles.multiEditSubtitle}>Cette pièce apparaît dans plusieurs sous-ensembles. Ajustez les quantités par sous-ensemble :</p>
+            <div style={styles.multiEditRows}>
+              {multiEditItem.cartKeys.map(key => {
+                const cartItem = cartItems.find(i => i.cartKey === key)
+                if (!cartItem) return null
+                const label = cartItem.sous_ensemble_nom
+                  ? `📦 ${cartItem.sous_ensemble_nom}`
+                  : 'Pièce individuelle'
+                return (
+                  <div key={key} style={styles.multiEditRow}>
+                    <span style={styles.multiEditLabel}>{label}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={multiEditQtys[key] ?? cartItem.quantite}
+                      onChange={(e) => setMultiEditQtys(prev => ({ ...prev, [key]: e.target.value }))}
+                      style={styles.multiEditInput}
+                    />
+                    <span style={styles.multiEditUnit}>pcs</span>
+                  </div>
+                )
+              })}
+            </div>
+            <p style={styles.multiEditHint}>Mettre 0 pour supprimer du sous-ensemble concerné.</p>
+            <div style={styles.multiEditFooter}>
+              <button onClick={() => setMultiEditItem(null)} style={styles.toggleBtn}>Annuler</button>
+              <button onClick={saveMultiEdit} style={styles.submitBtn}>Confirmer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && <div style={styles.error}>{error}</div>}
 
@@ -116,6 +175,23 @@ export default function CartPage() {
         </div>
       ) : (
         <>
+          {/* Toggle vue */}
+          <div style={styles.toggleBar}>
+            <span style={styles.toggleLabel}>Affichage :</span>
+            <button
+              onClick={() => setViewMode('subassembly')}
+              style={viewMode === 'subassembly' ? styles.toggleBtnActive : styles.toggleBtn}
+            >
+              📦 Par sous-ensemble
+            </button>
+            <button
+              onClick={() => setViewMode('article')}
+              style={viewMode === 'article' ? styles.toggleBtnActive : styles.toggleBtn}
+            >
+              📋 Par article
+            </button>
+          </div>
+
           {/* Tableau du panier */}
           <div style={styles.tableContainer}>
             <table style={styles.table}>
@@ -128,43 +204,136 @@ export default function CartPage() {
                   {!isMobile && <th style={styles.th}>N° Dessin</th>}
                   {!isMobile && <th style={styles.th}>Position</th>}
                   <th style={styles.th}>Prix U</th>
-                  <th style={styles.th}>Qté</th>
+                  <th style={styles.th}>Qté {viewMode === 'article' ? 'totale' : ''}</th>
                   {!isMobile && <th style={styles.th}>Sous-total</th>}
                   <th style={styles.th}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {cartItems.map((item, idx) => (
-                  <tr key={item.id} style={{...styles.row, backgroundColor: idx % 2 === 0 ? 'white' : '#f9f9f9'}}>
-                    <td style={styles.td}>{item.numero_interne}</td>
-                    <td style={styles.td}>{item.denomination}</td>
-                    {!isMobile && <td style={styles.td}>{item.numero_fournisseur}</td>}
-                    {!isMobile && <td style={styles.td}>{item.fournisseur}</td>}
-                    {!isMobile && <td style={styles.td}>{item.numero_dessin || '-'}</td>}
-                    {!isMobile && <td style={styles.td}>{item.position_dessin || '-'}</td>}
-                    <td style={styles.td}>{item.prix_unitaire.toFixed(2)} CHF</td>
-                    <td style={styles.td}>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantite}
-                        onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 1)}
-                        style={styles.qtyInput}
-                      />
-                    </td>
-                    {!isMobile && <td style={styles.td}>
-                      <strong>{(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong>
-                    </td>}
-                    <td style={styles.td}>
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        style={styles.removeBtn}
-                      >
-                        {isMobile ? '✕' : 'Supprimer'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {viewMode === 'article' ? (() => {
+                  // Vue article : fusionner les doublons par piece.id, conserver tous les cartKeys
+                  const merged = {}
+                  cartItems.forEach(item => {
+                    if (merged[item.id]) {
+                      merged[item.id].quantite += item.quantite
+                      merged[item.id].cartKeys.push(item.cartKey)
+                    } else {
+                      merged[item.id] = { ...item, cartKeys: [item.cartKey] }
+                    }
+                  })
+                  return Object.values(merged).map((item, idx) => {
+                    const isMulti = item.cartKeys.length > 1
+                    return (
+                      <tr key={item.id} style={{...styles.row, backgroundColor: idx % 2 === 0 ? '#EEF5FF' : '#E3EFFE'}}>
+                        <td style={styles.td}>{item.numero_interne}</td>
+                        <td style={styles.td}>{item.denomination}</td>
+                        {!isMobile && <td style={styles.td}>{item.numero_fournisseur}</td>}
+                        {!isMobile && <td style={styles.td}>{item.fournisseur}</td>}
+                        {!isMobile && <td style={styles.td}>{item.numero_dessin || '-'}</td>}
+                        {!isMobile && <td style={styles.td}>{item.position_dessin || '-'}</td>}
+                        <td style={styles.td}>{item.prix_unitaire.toFixed(2)} CHF</td>
+                        <td style={styles.td}>
+                          {isMulti ? (
+                            <span style={{display:'flex', alignItems:'center', gap:'6px'}}>
+                              <strong>{item.quantite}</strong>
+                              <button onClick={() => openMultiEdit(item)} style={styles.editQtyBtn} title="Répartir sur les sous-ensembles">✏️</button>
+                            </span>
+                          ) : (
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantite}
+                              onChange={(e) => updateQuantity(item.cartKeys[0], parseInt(e.target.value) || 1)}
+                              style={styles.qtyInput}
+                            />
+                          )}
+                        </td>
+                        {!isMobile && <td style={styles.td}>
+                          <strong>{(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong>
+                        </td>}
+                        <td style={styles.td}>
+                          <button
+                            onClick={() => item.cartKeys.forEach(k => removeItem(k))}
+                            style={styles.removeBtn}
+                          >
+                            {isMobile ? '✕' : 'Supprimer'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                })() : (() => {
+                  const colSpan = isMobile ? 5 : 10
+                  // Vue sous-ensemble : grouper
+                  const seGroups = {}
+                  const individualItems = []
+                  cartItems.forEach(item => {
+                    if (item.sous_ensemble_id) {
+                      if (!seGroups[item.sous_ensemble_id]) {
+                        seGroups[item.sous_ensemble_id] = { nom: item.sous_ensemble_nom, quantite: item.sous_ensemble_quantite, items: [] }
+                      }
+                      seGroups[item.sous_ensemble_id].items.push(item)
+                    } else {
+                      individualItems.push(item)
+                    }
+                  })
+
+                  const renderRow = (item, bgColor) => (
+                    <tr key={item.cartKey} style={{...styles.row, backgroundColor: bgColor}}>
+                      <td style={styles.td}>{item.numero_interne}</td>
+                      <td style={styles.td}>{item.denomination}</td>
+                      {!isMobile && <td style={styles.td}>{item.numero_fournisseur}</td>}
+                      {!isMobile && <td style={styles.td}>{item.fournisseur}</td>}
+                      {!isMobile && <td style={styles.td}>{item.numero_dessin || '-'}</td>}
+                      {!isMobile && <td style={styles.td}>{item.position_dessin || '-'}</td>}
+                      <td style={styles.td}>{item.prix_unitaire.toFixed(2)} CHF</td>
+                      <td style={styles.td}>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantite}
+                          onChange={(e) => updateQuantity(item.cartKey, parseInt(e.target.value) || 1)}
+                          style={styles.qtyInput}
+                        />
+                      </td>
+                      {!isMobile && <td style={styles.td}>
+                        <strong>{(item.prix_unitaire * item.quantite).toFixed(2)} CHF</strong>
+                      </td>}
+                      <td style={styles.td}>
+                        <button onClick={() => removeItem(item.cartKey)} style={styles.removeBtn}>
+                          {isMobile ? '✕' : 'Supprimer'}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+
+                  const rows = []
+                  Object.entries(seGroups).forEach(([seId, group]) => {
+                    rows.push(
+                      <tr key={`se-header-${seId}`}>
+                        <td colSpan={colSpan} style={styles.seHeaderTd}>
+                          📦 <strong>{group.nom}</strong> — {group.quantite} sous-ensemble{group.quantite > 1 ? 's' : ''} commandé{group.quantite > 1 ? 's' : ''}
+                        </td>
+                      </tr>
+                    )
+                    group.items.forEach((item, idx) => {
+                      rows.push(renderRow(item, idx % 2 === 0 ? '#EEF5FF' : '#E3EFFE'))
+                    })
+                  })
+
+                  if (Object.keys(seGroups).length > 0 && individualItems.length > 0) {
+                    rows.push(
+                      <tr key="sep-individual">
+                        <td colSpan={colSpan} style={styles.seSeparatorTd}>Pièces individuelles</td>
+                      </tr>
+                    )
+                  }
+                  individualItems.forEach((item, idx) => {
+                    rows.push(renderRow(item, idx % 2 === 0 ? '#EEF5FF' : '#E3EFFE'))
+                  })
+
+                  return rows
+                })()}
               </tbody>
             </table>
           </div>
@@ -398,5 +567,126 @@ const styles = {
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '500'
+  },
+  modalOverlay: {
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 1000
+  },
+  multiEditModal: {
+    backgroundColor: 'white',
+    borderRadius: '10px',
+    padding: '28px',
+    width: '420px',
+    maxWidth: '90vw',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+  },
+  multiEditTitle: {
+    color: '#042C53',
+    margin: '0 0 6px 0',
+    fontSize: '16px'
+  },
+  multiEditSubtitle: {
+    color: '#555',
+    fontSize: '13px',
+    margin: '0 0 20px 0'
+  },
+  multiEditRows: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    marginBottom: '12px'
+  },
+  multiEditRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '10px 14px',
+    backgroundColor: '#f5f8ff',
+    borderRadius: '6px',
+    border: '1px solid #dce8ff'
+  },
+  multiEditLabel: {
+    flex: 1,
+    fontSize: '13px',
+    color: '#333'
+  },
+  multiEditInput: {
+    width: '70px',
+    padding: '6px',
+    border: '1px solid #185FA5',
+    borderRadius: '4px',
+    textAlign: 'center',
+    fontSize: '14px',
+    fontWeight: 'bold'
+  },
+  multiEditUnit: {
+    fontSize: '12px',
+    color: '#888',
+    width: '24px'
+  },
+  multiEditHint: {
+    fontSize: '11px',
+    color: '#888',
+    fontStyle: 'italic',
+    margin: '0 0 20px 0'
+  },
+  multiEditFooter: {
+    display: 'flex',
+    gap: '10px',
+    justifyContent: 'flex-end'
+  },
+  editQtyBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px',
+    padding: '0 2px',
+    lineHeight: 1
+  },
+  toggleBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '12px'
+  },
+  toggleLabel: {
+    fontSize: '14px',
+    color: '#555',
+    marginRight: '4px'
+  },
+  toggleBtn: {
+    padding: '7px 16px',
+    backgroundColor: 'white',
+    color: '#185FA5',
+    border: '1px solid #185FA5',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px'
+  },
+  toggleBtnActive: {
+    padding: '7px 16px',
+    backgroundColor: '#185FA5',
+    color: 'white',
+    border: '1px solid #185FA5',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '600'
+  },
+  seHeaderTd: {
+    padding: '8px 16px',
+    backgroundColor: '#042C53',
+    color: 'white',
+    fontSize: '13px',
+    fontWeight: '500'
+  },
+  seSeparatorTd: {
+    padding: '6px 16px',
+    backgroundColor: '#888780',
+    color: 'white',
+    fontSize: '12px',
+    fontStyle: 'italic'
   }
 }
